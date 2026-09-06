@@ -35,12 +35,12 @@ const footerSections = [
                 to: NAVIGATION_PATHS.DISCOVER,
             },
             {
-                label: "Popular Services",
-                to: NAVIGATION_PATHS.SEARCH,
-            },
-            {
                 label: "How DailyBookings Works",
                 to: "/how-it-works",
+            },
+            {
+                label: "Popular Services",
+                to: NAVIGATION_PATHS.SEARCH,
             },
             {
                 label: "Help & Support",
@@ -55,19 +55,23 @@ const footerSections = [
         links: [
             {
                 label: "Become a Professional",
-                to: NAVIGATION_PATHS.BUSINESS,
+                to: "/for-business",
             },
             {
-                label: "Why DailyBookings?",
-                to: NAVIGATION_PATHS.BUSINESS,
+                label: "How It Works",
+                to: "/business/how-it-works",
             },
             {
                 label: "Professional Features",
-                to: NAVIGATION_PATHS.BUSINESS,
+                to: "/business/features",
+            },
+            {
+                label: "Pricing",
+                to: "/business/pricing",
             },
             {
                 label: "Get Started",
-                to: NAVIGATION_PATHS.BUSINESS,
+                to: NAVIGATION_PATHS.REGISTER,
             },
         ],
     },

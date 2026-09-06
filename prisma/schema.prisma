@@ -187,13 +187,19 @@ model BookingConfig {
   updatedAt DateTime @updatedAt
 }
 
+enum CategoryStatus {
+  ACTIVE
+  INACTIVE
+}
+
 model Category {
-  id          String  @id @default(uuid())
-  name        String  @unique
-  slug        String  @unique
+  id          String         @id @default(uuid())
+  name        String         @unique
+  slug        String         @unique
   description String?
   imageUrl    String?
   icon        String?
+  status      CategoryStatus @default(ACTIVE)
 
   venues Venue[]
 }

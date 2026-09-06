@@ -62,6 +62,19 @@ export interface OpeningHours {
   closed?: boolean
 }
 
+export interface Category {
+  id: string
+  name: string
+  slug: string
+  description?: string | null
+  imageUrl?: string | null
+  icon?: string | null
+  status?: 'ACTIVE' | 'INACTIVE'
+  _count?: {
+    venues: number
+  }
+}
+
 export interface Venue {
   id: string
   slug: string
@@ -72,12 +85,7 @@ export interface Venue {
   rating: number
   reviewCount: number
   reviewSummary?: string
-  category: {
-    id: string
-    name: string
-    slug: string
-    icon?: string
-  }
+  category: Category
   tags: string[]
   address: VenueAddress
   phone?: string

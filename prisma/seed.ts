@@ -4,9 +4,11 @@ import {
   PrismaClient,
   UserRole,
   MediaEntityType,
-  MediaType,
   VenueStatus,
+  BookingStatus,
 } from "@prisma/client";
+
+import { addDays } from "date-fns";
 
 const connectionString = process.env.DIRECT_URL;
 
@@ -29,458 +31,297 @@ async function main() {
   // 1. Categories
   // ---------------------------------------------------------------------------
 
-  const categories = [
-    { name: "Hair", slug: "hair", icon: "Scissors" },
-    { name: "Nails", slug: "nails", icon: "Sparkles" },
-    { name: "Beauty", slug: "beauty", icon: "HeartPulse" },
-    { name: "Massage", slug: "massage", icon: "Flower" },
-    { name: "Barber", slug: "barber", icon: "UserRound" },
-    { name: "Fitness", slug: "fitness", icon: "Dumbbell" },
+  const categoriesData = [
+    {
+      name: "Hair",
+      slug: "hair",
+      icon: "Scissors",
+      description: "Salons, barbers & stylists for all hair types.",
+      imageUrl: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800",
+      status: "ACTIVE"
+    },
+    {
+      name: "Nails",
+      slug: "nails",
+      icon: "Sparkles",
+      description: "Manicures, pedicures and custom nail art.",
+      imageUrl: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800",
+      status: "ACTIVE"
+    },
+    {
+      name: "Beauty",
+      slug: "beauty",
+      icon: "HeartPulse",
+      description: "Skincare, makeup and aesthetic treatments.",
+      imageUrl: "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=800",
+      status: "ACTIVE"
+    },
+    {
+      name: "Wellness",
+      slug: "wellness",
+      icon: "Flower",
+      description: "Massage, spa and holistic wellbeing.",
+      imageUrl: "https://images.unsplash.com/photo-1544161515-4ae6ce6db87e?w=800",
+      status: "ACTIVE"
+    },
+    {
+      name: "Barber",
+      slug: "barber",
+      icon: "UserRound",
+      description: "Precision cuts and grooming for men.",
+      imageUrl: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800",
+      status: "ACTIVE"
+    },
+    {
+      name: "Fitness",
+      slug: "fitness",
+      icon: "Dumbbell",
+      description: "Gyms, personal trainers and yoga classes.",
+      imageUrl: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800",
+      status: "ACTIVE"
+    },
+    {
+      name: "Photography",
+      slug: "photography",
+      icon: "Camera",
+      description: "Professional photographers and creative studios.",
+      imageUrl: "https://images.unsplash.com/photo-1520853502340-599adeb22424?w=800",
+      status: "ACTIVE"
+    },
+    {
+      name: "Tutors",
+      slug: "tutors",
+      icon: "GraduationCap",
+      description: "Academic support and skill development.",
+      imageUrl: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800",
+      status: "ACTIVE"
+    },
   ];
 
-  for (const category of categories) {
+  for (const cat of categoriesData) {
     await prisma.category.upsert({
-      where: {
-        slug: category.slug,
-      },
-      update: {
-        name: category.name,
-        icon: category.icon,
-      },
-      create: category,
+      where: { slug: cat.slug },
+      update: cat,
+      create: cat,
     });
   }
 
-  const hairCategory = await prisma.category.findUnique({
-    where: {
-      slug: "hair",
+  const allCategories = await prisma.category.findMany();
+
+  // ---------------------------------------------------------------------------
+  // 2. Users
+  // ---------------------------------------------------------------------------
+
+  const admin = await prisma.user.upsert({
+    where: { email: "admin@dailybookings.co.za" },
+    update: { role: UserRole.PLATFORM_ADMIN, fullName: "DailyBookings Admin" },
+    create: {
+      email: "admin@dailybookings.co.za",
+      fullName: "DailyBookings Admin",
+      role: UserRole.PLATFORM_ADMIN,
     },
   });
 
-  if (!hairCategory) {
-    throw new Error("Hair category was not created");
-  }
-
-  // ---------------------------------------------------------------------------
-  // 2. User
-  // ---------------------------------------------------------------------------
-
-  const owner = await prisma.user.upsert({
-    where: {
-      email: "owner@dailybookings.co.za",
-    },
-    update: {
-      fullName: "Naledi Molapo",
-      role: UserRole.BUSINESS_OWNER,
-    },
+  const customer = await prisma.user.upsert({
+    where: { email: "customer@example.com" },
+    update: { role: UserRole.CUSTOMER, fullName: "John Doe" },
     create: {
-      email: "owner@dailybookings.co.za",
-      fullName: "Naledi Molapo",
-      role: UserRole.BUSINESS_OWNER,
-
+      email: "customer@example.com",
+      fullName: "John Doe",
+      role: UserRole.CUSTOMER,
       profile: {
         create: {
-          avatarUrl:
-            "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=600",
-          bio: "Owner of Kutlwano Hair & Beauty",
-          phone: "+27 71 234 5678",
+          bio: "Regular customer looking for local services.",
         },
       },
     },
   });
 
-  // ---------------------------------------------------------------------------
-  // 3. Business
-  // ---------------------------------------------------------------------------
-
-  const business = await prisma.business.upsert({
-    where: {
-      id: "kutlwano-business-id",
-    },
-    update: {
-      ownerId: owner.id,
-      name: "Kutlwano Group",
-      verified: true,
-    },
-    create: {
-      id: "kutlwano-business-id",
-      ownerId: owner.id,
-      name: "Kutlwano Group",
-      verified: true,
-    },
-  });
-
-  // ---------------------------------------------------------------------------
-  // 4. Venue
-  // ---------------------------------------------------------------------------
-
-  const venue = await prisma.venue.upsert({
-    where: {
-      slug: "kutlwano-hair-and-beauty",
-    },
-    update: {
-      businessId: business.id,
-      name: "Kutlwano Hair & Beauty",
-      tagline: "Hair, nails and beauty services in the heart of Orlando West.",
-      description:
-        "A neighbourhood beauty spot offering wash-and-styles, gel nails, waxing and skincare, run by a small team that knows most of its regulars by name.",
-      categoryId: hairCategory.id,
-      status: VenueStatus.ACTIVE,
-      rating: 4.9,
-      reviewCount: 214,
-    },
-    create: {
-      businessId: business.id,
-      slug: "kutlwano-hair-and-beauty",
-      name: "Kutlwano Hair & Beauty",
-      tagline: "Hair, nails and beauty services in the heart of Orlando West.",
-      description:
-        "A neighbourhood beauty spot offering wash-and-styles, gel nails, waxing and skincare, run by a small team that knows most of its regulars by name.",
-      categoryId: hairCategory.id,
-      status: VenueStatus.ACTIVE,
-      rating: 4.9,
-      reviewCount: 214,
-
-      address: {
-        create: {
-          street: "12 Vilakazi Street",
-          suburb: "Orlando West",
-          city: "Soweto",
-          region: "Gauteng",
-          postalCode: "1804",
-          country: "South Africa",
-          lat: -26.2412,
-          lng: 27.9247,
-        },
-      },
-
-      contact: {
-        create: {
-          phone: "+27 71 234 5678",
-          whatsapp: "+27 71 234 5678",
-          email: "hello@kutlwano.co.za",
-          instagram: "@kutlwanobeauty",
-          facebook: "Kutlwano Hair & Beauty",
-        },
-      },
-
-      bookingConfig: {
-        create: {
-          instantConfirmation: true,
-          acceptsOnlinePayments: true,
-          requiresDeposit: false,
-          depositPercentage: 0,
-          cancellationPolicy:
-            "Free cancellation up to 24 hours before your appointment.",
-          minimumNoticeMinutes: 60,
-        },
-      },
-    },
-  });
-
-  // ---------------------------------------------------------------------------
-  // 5. Venue working hours
-  // ---------------------------------------------------------------------------
-
-  const hoursData = [
-    {
-      day: 1,
-      opens: "09:00",
-      closes: "18:00",
-      closed: false,
-    },
-    {
-      day: 2,
-      opens: "09:00",
-      closes: "18:00",
-      closed: false,
-    },
-    {
-      day: 3,
-      opens: "09:00",
-      closes: "18:00",
-      closed: false,
-    },
-    {
-      day: 4,
-      opens: "09:00",
-      closes: "18:00",
-      closed: false,
-    },
-    {
-      day: 5,
-      opens: "09:00",
-      closes: "19:00",
-      closed: false,
-    },
-    {
-      day: 6,
-      opens: "08:00",
-      closes: "16:00",
-      closed: false,
-    },
-    {
-      day: 0,
-      opens: null,
-      closes: null,
-      closed: true,
-    },
+  const owners = [
+    { email: "naledi@kutlwano.co.za", name: "Naledi Molapo", bio: "Passionate about beauty and community." },
+    { email: "sipho@thebarber.co.za", name: "Sipho Khumalo", bio: "Master barber with 10 years experience." },
+    { email: "claire@wellness.co.za", name: "Claire van Wyk", bio: "Holistic health and wellness advocate." },
   ];
 
-  for (const hours of hoursData) {
-    await prisma.venueSchedule.upsert({
-      where: {
-        venueId_day: {
-          venueId: venue.id,
-          day: hours.day,
+  const ownersDb = [];
+  for (const o of owners) {
+    const user = await prisma.user.upsert({
+      where: { email: o.email },
+      update: { role: UserRole.BUSINESS_OWNER, fullName: o.name },
+      create: {
+        email: o.email,
+        fullName: o.name,
+        role: UserRole.BUSINESS_OWNER,
+        profile: {
+          create: {
+            bio: o.bio,
+          },
         },
       },
-      update: {
-        opens: hours.opens,
-        closes: hours.closes,
-        closed: hours.closed,
-      },
-      create: {
-        venueId: venue.id,
-        ...hours,
-      },
     });
+    ownersDb.push(user);
   }
 
   // ---------------------------------------------------------------------------
-  // 6. Service categories
+  // 3. Businesses & Venues
   // ---------------------------------------------------------------------------
 
-  const featuredServiceCategory = await prisma.serviceCategory.upsert({
-    where: {
-      venueId_name: {
-        venueId: venue.id,
-        name: "Featured",
+  const venuesData = [
+    {
+      ownerIdx: 0,
+      slug: "kutlwano-hair-and-beauty",
+      name: "Kutlwano Hair & Beauty",
+      tagline: "Hair, nails and beauty in Soweto",
+      catSlug: "hair",
+      city: "Soweto",
+      verified: true,
+    },
+    {
+      ownerIdx: 1,
+      slug: "the-gentlemans-barber-sandton",
+      name: "The Gentleman's Barber",
+      tagline: "Premium grooming in Sandton",
+      catSlug: "barber",
+      city: "Sandton",
+      verified: true,
+    },
+    {
+      ownerIdx: 2,
+      slug: "zen-harmony-spa-stellenbosch",
+      name: "Zen Harmony Spa",
+      tagline: "Find your peace in Stellenbosch",
+      catSlug: "wellness",
+      city: "Stellenbosch",
+      verified: true,
+    },
+  ];
+
+  for (const v of venuesData) {
+    const category = allCategories.find((c) => c.slug === v.catSlug);
+    const owner = ownersDb[v.ownerIdx];
+
+    const business = await prisma.business.upsert({
+      where: { id: `${v.slug}-id` },
+      update: { name: `${v.name} Group`, verified: v.verified },
+      create: {
+        id: `${v.slug}-id`,
+        ownerId: owner.id,
+        name: `${v.name} Group`,
+        verified: v.verified,
       },
-    },
-    update: {},
-    create: {
-      venueId: venue.id,
-      name: "Featured",
-    },
-  });
+    });
 
-  const nailsServiceCategory = await prisma.serviceCategory.upsert({
-    where: {
-      venueId_name: {
-        venueId: venue.id,
-        name: "Nails",
+    const venue = await prisma.venue.upsert({
+      where: { slug: v.slug },
+      update: {
+        name: v.name,
+        tagline: v.tagline,
+        description: `A premier ${category?.name} venue located in ${v.city}. We pride ourselves on exceptional service and community values.`,
+        categoryId: category!.id,
+        status: VenueStatus.ACTIVE,
       },
-    },
-    update: {},
-    create: {
-      venueId: venue.id,
-      name: "Nails",
-    },
-  });
-
-  // ---------------------------------------------------------------------------
-  // 7. Services
-  // ---------------------------------------------------------------------------
-
-  const washCutBlowDry = await prisma.service.upsert({
-    where: {
-      id: "kutlwano-wash-cut-blowdry",
-    },
-    update: {
-      serviceCategoryId: featuredServiceCategory.id,
-      name: "Wash, cut & blow-dry",
-      description: "A complete wash, precision cut and finished blow-dry.",
-      durationMinutes: 60,
-      bufferMinutes: 0,
-      price: 210,
-      priceIsFrom: true,
-      popular: true,
-    },
-    create: {
-      id: "kutlwano-wash-cut-blowdry",
-      serviceCategoryId: featuredServiceCategory.id,
-      name: "Wash, cut & blow-dry",
-      description: "A complete wash, precision cut and finished blow-dry.",
-      durationMinutes: 60,
-      bufferMinutes: 0,
-      price: 210,
-      priceIsFrom: true,
-      popular: true,
-    },
-  });
-
-  const gelOverlayRemoval = await prisma.service.upsert({
-    where: {
-      id: "kutlwano-gel-overlay-removal",
-    },
-    update: {
-      serviceCategoryId: featuredServiceCategory.id,
-      name: "Gel overlay & removal",
-      description: "Gel overlay with removal of existing product included.",
-      durationMinutes: 75,
-      bufferMinutes: 0,
-      price: 370,
-      priceIsFrom: false,
-      popular: true,
-    },
-    create: {
-      id: "kutlwano-gel-overlay-removal",
-      serviceCategoryId: featuredServiceCategory.id,
-      name: "Gel overlay & removal",
-      description: "Gel overlay with removal of existing product included.",
-      durationMinutes: 75,
-      bufferMinutes: 0,
-      price: 370,
-      priceIsFrom: false,
-      popular: true,
-    },
-  });
-
-  const gelOverlay = await prisma.service.upsert({
-    where: {
-      id: "kutlwano-gel-overlay",
-    },
-    update: {
-      serviceCategoryId: nailsServiceCategory.id,
-      name: "Gel overlay",
-      description: "Long-lasting gel overlay for natural nails.",
-      durationMinutes: 60,
-      bufferMinutes: 0,
-      price: 290,
-      priceIsFrom: false,
-      popular: true,
-    },
-    create: {
-      id: "kutlwano-gel-overlay",
-      serviceCategoryId: nailsServiceCategory.id,
-      name: "Gel overlay",
-      description: "Long-lasting gel overlay for natural nails.",
-      durationMinutes: 60,
-      bufferMinutes: 0,
-      price: 290,
-      priceIsFrom: false,
-      popular: true,
-    },
-  });
-
-  // ---------------------------------------------------------------------------
-  // 8. Employee
-  // ---------------------------------------------------------------------------
-
-  const naledi = await prisma.employee.upsert({
-    where: {
-      id: "kutlwano-naledi",
-    },
-    update: {
-      venueId: venue.id,
-      name: "Naledi",
-      title: "Owner · Stylist",
-      rating: 5,
-      reviewCount: 86,
-      imageUrl:
-        "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=600",
-    },
-    create: {
-      id: "kutlwano-naledi",
-      venueId: venue.id,
-      name: "Naledi",
-      title: "Owner · Stylist",
-      rating: 5,
-      reviewCount: 86,
-      imageUrl:
-        "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=600",
-
-      schedules: {
-        createMany: {
-          data: [
-            {
-              day: 1,
-              startTime: "09:00",
-              endTime: "18:00",
+      create: {
+        businessId: business.id,
+        slug: v.slug,
+        name: v.name,
+        tagline: v.tagline,
+        description: `A premier ${category?.name} venue located in ${v.city}. We pride ourselves on exceptional service and community values.`,
+        categoryId: category!.id,
+        status: VenueStatus.ACTIVE,
+        rating: 4.5 + Math.random() * 0.5,
+        reviewCount: Math.floor(Math.random() * 500) + 10,
+        address: {
+          create: {
+            street: "123 Main Street",
+            suburb: "Central",
+            city: v.city,
+            region: "Gauteng",
+            postalCode: "2000",
+          },
+        },
+        contact: {
+          create: {
+            phone: "+27 11 123 4567",
+            email: `hello@${v.slug}.co.za`,
+          },
+        },
+        bookingConfig: {
+          create: {
+            instantConfirmation: true,
+            minimumNoticeMinutes: 60,
+          },
+        },
+        schedules: {
+          createMany: {
+            data: [1, 2, 3, 4, 5].map((d) => ({ day: d, opens: "09:00", closes: "18:00" })),
+          },
+        },
+        media: {
+          create: {
+            url: category?.imageUrl || "",
+            entityType: MediaEntityType.VENUE,
+            featured: true,
+          },
+        },
+        serviceCategories: {
+          create: {
+            name: "Standard Services",
+            services: {
+              create: [
+                { name: `${category?.name} Session`, durationMinutes: 60, price: 250 + Math.random() * 500, popular: true },
+                { name: "Premium Treatment", durationMinutes: 90, price: 600 + Math.random() * 400 },
+              ],
             },
+          },
+        },
+        employees: {
+          create: [
             {
-              day: 2,
-              startTime: "09:00",
-              endTime: "18:00",
-            },
-            {
-              day: 3,
-              startTime: "09:00",
-              endTime: "18:00",
-            },
-            {
-              day: 4,
-              startTime: "09:00",
-              endTime: "18:00",
-            },
-            {
-              day: 5,
-              startTime: "09:00",
-              endTime: "19:00",
-            },
-            {
-              day: 6,
-              startTime: "08:00",
-              endTime: "16:00",
+              name: `Professional ${v.name.split(" ")[0]}`,
+              title: "Senior Expert",
+              rating: 4.8,
+              schedules: {
+                createMany: {
+                  data: [1, 2, 3, 4, 5].map((d) => ({ day: d, startTime: "09:00", endTime: "18:00" })),
+                },
+              },
             },
           ],
         },
       },
-    },
-  });
+    });
 
-  // ---------------------------------------------------------------------------
-  // 9. Assign services to employee
-  // ---------------------------------------------------------------------------
+    // Seed some reviews if not already present
+    const existingReviews = await prisma.review.count({ where: { venueId: venue.id } });
+    if (existingReviews === 0) {
+      await prisma.review.create({
+        data: {
+          userId: customer.id,
+          venueId: venue.id,
+          rating: 5,
+          body: "Absolutely wonderful experience! Highly recommended.",
+          verified: true,
+        },
+      });
+    }
 
-  await prisma.employee.update({
-    where: {
-      id: naledi.id,
-    },
-    data: {
-      services: {
-        connect: [
-          {
-            id: washCutBlowDry.id,
-          },
-          {
-            id: gelOverlayRemoval.id,
-          },
-          {
-            id: gelOverlay.id,
-          },
-        ],
-      },
-    },
-  });
-
-  // ---------------------------------------------------------------------------
-  // 10. Venue media
-  // ---------------------------------------------------------------------------
-
-  await prisma.media.createMany({
-    data: [
-      {
-        venueId: venue.id,
-        url: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1600",
-        alt: "Interior of Kutlwano Hair & Beauty",
-        type: MediaType.IMAGE,
-        featured: true,
-        entityType: MediaEntityType.VENUE,
-        category: "gallery",
-      },
-      {
-        venueId: venue.id,
-        url: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200",
-        alt: "Nail station",
-        type: MediaType.IMAGE,
-        featured: false,
-        entityType: MediaEntityType.VENUE,
-        category: "gallery",
-      },
-    ],
-  });
+    // Seed some bookings if not already present
+    const existingBookings = await prisma.booking.count({ where: { venueId: venue.id } });
+    if (existingBookings === 0) {
+      await prisma.booking.create({
+        data: {
+          userId: customer.id,
+          venueId: venue.id,
+          date: addDays(new Date(), 1),
+          startTime: "10:00",
+          endTime: "11:00",
+          durationTotal: 60,
+          priceTotal: 350,
+          status: BookingStatus.CONFIRMED,
+        },
+      });
+    }
+  }
 
   console.log("Seeding finished successfully.");
 }

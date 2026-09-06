@@ -96,7 +96,7 @@ const popularCategories = computed(
                     />
 
                     <img
-                        :src="category.image || fallbackImage"
+                        :src="category.imageUrl || fallbackImage"
                         :alt="category.name"
                         loading="lazy"
                         class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
@@ -116,6 +116,9 @@ const popularCategories = computed(
                         </p>
 
                         <div class="mt-5 flex items-center justify-between">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                {{ category._count?.venues || 0 }} Venues
+                            </div>
                             <div
                                 class="flex h-9 w-9 items-center justify-center rounded-full text-slate-200 border border-slate-200 transition-all duration-300 group-hover:border-primary group-hover:bg-primary group-hover:text-white"
                             >

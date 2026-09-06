@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { MapPin, Search } from "lucide-vue-next";
 import { onBeforeUnmount, onMounted, ref } from "vue";
-import { NAVIGATION_PATHS, POPULAR_SERVICES } from "~/utils/constants";
+import { NAVIGATION_PATHS } from "~/utils/constants";
+
+const { data: discovery } = await useDiscovery();
 
 const heroVideo = ref("/videos/hero.mp4");
 const searchQuery = ref("");
@@ -147,13 +149,13 @@ onBeforeUnmount(() => {
                     <span class="text-white/45"> Popular: </span>
 
                     <button
-                        v-for="service in POPULAR_SERVICES.slice(0, 4)"
-                        :key="service"
+                        v-for="service in discovery?.trendingServices?.slice(0, 4)"
+                        :key="service.id"
                         type="button"
                         class="text-white/75 transition-colors hover:text-white"
-                        @click="selectPopularService(service)"
+                        @click="selectPopularService(service.name)"
                     >
-                        {{ service }}
+                        {{ service.name }}
                     </button>
                 </div>
             </div>

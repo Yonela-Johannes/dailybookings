@@ -16,6 +16,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@nuxtjs/google-fonts": "^3.2.0",
     "@nuxtjs/supabase": "latest",
     "@nuxtjs/tailwindcss": "latest",
     "@prisma/adapter-pg": "^7.10.0",
