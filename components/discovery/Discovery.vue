@@ -1,0 +1,170 @@
+<script setup lang="ts">
+import ProviderCarousel from "./ProviderCarousel.vue";
+
+// Replace these with real data fetched from your API / composable,
+// e.g. const { data: recommended } = await useFetch('/api/providers/recommended')
+const recommended = [
+    {
+        id: 1,
+        slug: "rose-blvd-beauty-bar-sea-point-cape-town",
+        name: "Rose Blvd Beauty Bar SEA POINT",
+        image: "/images/providers/rose-blvd.jpg",
+        alt: "Nail spa interior at Rose Blvd Beauty Bar Sea Point",
+        rating: 4.9,
+        location: "Sea Point, Cape Town",
+        category: "Nails",
+        reviews: 5012,
+        tag: "Featured",
+    },
+    {
+        id: 2,
+        slug: "boa-beauty-bar-durbanville-cape-town",
+        name: "BOA Beauty Bar Durbanville",
+        image: "/images/providers/boa-durbanville.jpg",
+        alt: "Interior of BOA Beauty Bar Durbanville",
+        rating: 4.7,
+        location: "Durbanville, Cape Town",
+        category: "Nails",
+        reviews: 8854,
+        tag: "Featured",
+    },
+    {
+        id: 3,
+        slug: "kallos-house-of-beauty-cape-town",
+        name: "Kallos House of Beauty",
+        image: "/images/providers/kallos.jpg",
+        alt: "Interior of Kallos House of Beauty",
+        rating: 5.0,
+        location: "Eversdal, Cape Town",
+        category: "Beauty Salon",
+        reviews: 788,
+        tag: "Featured",
+    },
+    {
+        id: 4,
+        slug: "mbokodo-hair-salon-sandton",
+        name: "Mbokodo Hair Salon",
+        image: "/images/providers/mbokodo.jpg",
+        alt: "Interior of Mbokodo Hair Salon",
+        rating: 4.8,
+        location: "Beverley, Sandton",
+        category: "Hair Salon",
+        reviews: 136,
+        tag: "Featured",
+        verified: true,
+    },
+];
+
+const trending = [
+    {
+        id: 5,
+        slug: "akin-barber-shop-burj-al-salam-dubai",
+        name: "Akin Barber & Shop Burj Al Salam",
+        image: "/images/providers/akin-barber.jpg",
+        alt: "Barber chairs at Akin Barber & Shop Burj Al Salam",
+        rating: 5.0,
+        location: "Trade Centre, Dubai",
+        category: "Barber",
+        reviews: 3879,
+        tag: "Best in Class",
+    },
+    {
+        id: 6,
+        slug: "gould-barbers-bournemouth",
+        name: "Gould Barbers Bournemouth",
+        image: "/images/providers/gould-barbers.jpg",
+        alt: "Interior of Gould Barbers Bournemouth",
+        rating: 5.0,
+        location: "Littledown and Iford, Bournemouth",
+        category: "Barber",
+        reviews: 3009,
+        tag: "Best in Class",
+        verified: true,
+    },
+    {
+        id: 7,
+        slug: "twig-sharjah",
+        name: "Twig",
+        image: "/images/providers/twig.jpg",
+        alt: "Salon interior at Twig, Sharjah",
+        rating: 5.0,
+        location: "Industrial Area, Sharjah",
+        category: "Barber",
+        reviews: 2389,
+        tag: "Best in Class",
+    },
+    {
+        id: 8,
+        slug: "kapil-hair-studio-harrow",
+        name: "Kapil Hair Studio",
+        image: "/images/providers/kapil-hair-studio.jpg",
+        alt: "Interior of Kapil Hair Studio",
+        rating: 4.9,
+        location: "Harrow, London",
+        category: "Hair Salon",
+        reviews: 1389,
+        tag: "Best in Class",
+        verified: true,
+    },
+];
+
+const newArrivals = [
+    {
+        id: 9,
+        slug: "monada-il-belt-valletta",
+        name: "Monada",
+        image: "/images/providers/monada.jpg",
+        alt: "Beauty salon interior at Monada",
+        rating: 5.0,
+        location: "Il-belt Valletta",
+        category: "Hair Salon",
+        reviews: 1339,
+        tag: "Featured",
+    },
+    {
+        id: 10,
+        slug: "paulista-beauty-salon-dubai-marina",
+        name: "Paulista Beauty Salon",
+        image: "/images/providers/paulista.jpg",
+        alt: "Interior of Paulista Beauty Salon",
+        rating: 4.9,
+        location: "Dubai Marina, Dubai",
+        category: "Beauty Salon",
+        reviews: 1319,
+        tag: "Best in Class",
+    },
+    {
+        id: 11,
+        slug: "sofitel-spa-dubai-downtown",
+        name: "Sofitel Spa Dubai Downtown",
+        image: "/images/providers/sofitel-spa.jpg",
+        alt: "Lounge at Sofitel Spa Dubai Downtown",
+        rating: 4.9,
+        location: "Downtown Dubai, Dubai",
+        category: "Spa & sauna",
+        reviews: 1299,
+        tag: "Best in Class",
+    },
+    {
+        id: 12,
+        slug: "adam-grooming-atelier-brookfield-place-new-york",
+        name: "Adam Grooming Atelier - Brookfield Place",
+        image: "/images/providers/adam-grooming.jpg",
+        alt: "Interior of Adam Grooming Atelier Brookfield Place",
+        rating: 5.0,
+        location: "Manhattan, New York",
+        category: "Barber",
+        reviews: 1109,
+        tag: "Best in Class",
+        verified: true,
+    },
+];
+</script>
+
+<template>
+    <div class="flex flex-col gap-10 py-8 md:gap-14 md:py-12">
+        <ProviderCarousel title="Recommended" :items="recommended" />
+        <ProviderCarousel title="Trending" :items="trending" />
+        <ProviderCarousel title="New Arrivals" :items="newArrivals" />
+    </div>
+</template>

@@ -1,0 +1,21 @@
+{
+  "name": "dailybookings",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "nuxt": "latest",
+    "@nuxtjs/supabase": "latest",
+    "@nuxtjs/tailwindcss": "latest",
+    "lucide-vue-next": "latest",
+    "date-fns": "latest",
+    "clsx": "latest",
+    "tailwind-merge": "latest"
+  }
+}
