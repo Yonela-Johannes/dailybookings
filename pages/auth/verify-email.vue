@@ -120,7 +120,7 @@ async function resendVerification() {
 
                 <div class="mt-6 text-center">
                     <NuxtLink
-                        to="/login"
+                        to="/auth/login"
                         class="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-950"
                     >
                         <ArrowLeft class="h-4 w-4" />

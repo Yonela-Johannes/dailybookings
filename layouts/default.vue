@@ -1,8 +1,9 @@
 <template>
     <div class="relative min-h-screen">
-         <Header />
+        <Header />
         <main>
             <slot />
         </main>
+        <Footer />
     </div>
 </template>

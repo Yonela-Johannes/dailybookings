@@ -12,6 +12,7 @@ import {
 } from "lucide-vue-next";
 
 const { login } = useAuth();
+const route = useRoute();
 
 const email = ref("");
 const password = ref("");
@@ -36,7 +37,8 @@ async function handleLogin() {
         return;
     }
 
-    await navigateTo("/dashboard");
+    const redirect = route.query.redirect as string;
+    await navigateTo(redirect || "/dashboard");
 }
 
 function getAuthError(message: string) {

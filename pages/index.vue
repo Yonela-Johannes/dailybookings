@@ -26,5 +26,4 @@ const pinboardCategories = computed(() => {
     <Blogs />
     <Download />
     <Newsletter />
-    <Footer />
 </template>

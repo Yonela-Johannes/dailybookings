@@ -76,7 +76,10 @@ async function handleRegister() {
         return;
     }
 
-    await navigateTo("/verify-email");
+    await navigateTo({
+        path: "/auth/verify-email",
+        query: { email: email.value.trim() }
+    });
 }
 </script>
 
@@ -318,7 +321,7 @@ async function handleRegister() {
                 <p class="mt-6 text-center text-sm text-slate-500">
                     Already have an account?
                     <NuxtLink
-                        to="/login"
+                        to="/auth/login"
                         class="ml-1 font-semibold text-slate-950 hover:text-primary"
                     >
                         Sign in

@@ -25,12 +25,14 @@ const user = useSupabaseUser();
 const client = useSupabaseClient();
 
 const { data: discovery } = await useDiscovery();
+const route = useRoute()
 
-const isScrolled = ref(false);
-const menuOpen = ref(false);
-const exploreOpen = ref(false);
-const activeCategory = ref<string | null>(null);
+const isScrolled = ref(false)
+const menuOpen = ref(false)
+const exploreOpen = ref(false)
+const activeCategory = ref<string | null>(null)
 
+const isHomePage = computed(() => route.path === '/')
 const ICON_MAP: Record<string, any> = {
     sparkles: Sparkles,
     scissors: Scissors,
@@ -42,24 +44,26 @@ const ICON_MAP: Record<string, any> = {
     "briefcase-business": BriefcaseBusiness,
 };
 
-const handleScroll = () => {
-    isScrolled.value = window.scrollY > 20;
+const updateNavbarState = () => {
+   isScrolled.value = !isHomePage.value || window.scrollY > 20
 };
 
 onMounted(() => {
-    handleScroll();
-
-    window.addEventListener("scroll", handleScroll, {
-        passive: true,
-    });
-
-    window.addEventListener("keydown", handleKeydown);
-});
+  updateNavbarState()
+  window.addEventListener('scroll', updateNavbarState, { passive: true })
+})
 
 onBeforeUnmount(() => {
-    window.removeEventListener("scroll", handleScroll);
-    window.removeEventListener("keydown", handleKeydown);
-});
+  window.removeEventListener('scroll', updateNavbarState)
+})
+
+watch(
+  () => route.path,
+  () => {
+    closeMenu()
+    updateNavbarState()
+  },
+)
 
 const closeMenu = () => {
     menuOpen.value = false;

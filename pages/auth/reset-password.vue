@@ -104,7 +104,7 @@ async function handleReset() {
                         </p>
 
                         <NuxtLink
-                            to="/login"
+                            to="/auth/login"
                             class="mt-7 inline-flex h-11 items-center gap-2 bg-slate-950 px-5 text-sm font-semibold text-white hover:bg-primary"
                         >
                             Sign in
