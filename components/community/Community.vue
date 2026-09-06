@@ -17,7 +17,7 @@ const items: GalleryItem[] = [
     {
         id: 1,
         type: "video",
-        image: "/images/community/beauty-community.jpg",
+        image: "/images/makeup.jpg",
         video: "/videos/makeup-2.mp4",
         category: "Beauty",
         title: "Made for the people who make us feel good.",

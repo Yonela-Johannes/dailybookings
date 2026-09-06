@@ -1,9 +1,9 @@
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '~/server/utils/prisma'
 import { isBusinessOwner } from '~/server/utils/auth'
 import { startOfDay, endOfDay, startOfToday } from 'date-fns'
 
 export default defineEventHandler(async (event) => {
-  const prisma = new PrismaClient()
+
   const user = await isBusinessOwner(event)
 
   // Find all venues owned by this user (through business)
@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
   const startOfTodayDate = startOfDay(today)
   const endOfTodayDate = endOfDay(today)
 
-  const [todayBookingsCount, todayRevenue, upcomingBookings] = await Promise.all([
+  const [todayBookingsCount, totalBookingsCount, todayRevenue, upcomingBookings] = await Promise.all([
     prisma.booking.count({
       where: {
         venueId: { in: venueIds },
@@ -30,6 +30,12 @@ export default defineEventHandler(async (event) => {
           gte: startOfTodayDate,
           lte: endOfTodayDate
         },
+        status: { not: 'CANCELLED' }
+      }
+    }),
+    prisma.booking.count({
+      where: {
+        venueId: { in: venueIds },
         status: { not: 'CANCELLED' }
       }
     }),
@@ -75,6 +81,7 @@ export default defineEventHandler(async (event) => {
 
   return {
     todayBookingsCount,
+    totalBookingsCount,
     todayRevenue: todayRevenue._sum.priceTotal || 0,
     upcomingBookings
   }

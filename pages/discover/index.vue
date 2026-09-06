@@ -8,8 +8,16 @@ import {
   Filter,
   ArrowRight,
   Loader2,
+  Sparkles,
+  Scissors,
+  HeartPulse,
+  Dumbbell,
+  Camera,
+  GraduationCap,
+  House,
+  BriefcaseBusiness
 } from 'lucide-vue-next'
-import { CATEGORIES, NAVIGATION_PATHS, POPULAR_SERVICES, LOCATIONS } from "~/utils/constants";
+import { NAVIGATION_PATHS, POPULAR_SERVICES, LOCATIONS } from "~/utils/constants";
 
 useHead({
     title: "Discover Local Services | DailyBookings",
@@ -18,7 +26,22 @@ useHead({
     ]
 });
 
-const { data: discoveryData, pending } = await useAsyncData('discovery', () => $fetch('/api/discovery'))
+const { data: discoveryData, pending } = await useDiscovery();
+
+const ICON_MAP: Record<string, any> = {
+    sparkles: Sparkles,
+    scissors: Scissors,
+    'heart-pulse': HeartPulse,
+    dumbbell: Dumbbell,
+    camera: Camera,
+    'graduation-cap': GraduationCap,
+    house: House,
+    'briefcase-business': BriefcaseBusiness,
+};
+
+const getCategoryIcon = (iconName: string | null) => {
+    return ICON_MAP[iconName || 'sparkles'] || Sparkles;
+};
 
 const searchQuery = ref('')
 const locationQuery = ref('')
@@ -103,18 +126,22 @@ const handleSearch = () => {
           </NuxtLink>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-slate-200 border border-slate-200 overflow-hidden">
+        <div v-if="pending" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-slate-200 border border-slate-200 overflow-hidden">
+            <div v-for="i in 8" :key="i" class="bg-white p-10 animate-pulse h-40"></div>
+        </div>
+
+        <div v-else class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-slate-200 border border-slate-200 overflow-hidden">
           <NuxtLink
-            v-for="cat in CATEGORIES"
+            v-for="cat in discoveryData?.popularCategories"
             :key="cat.name"
             :to="NAVIGATION_PATHS.CATEGORY(cat.slug)"
             class="group bg-white p-10 text-center hover:bg-slate-50 transition-all duration-300 flex flex-col items-center"
           >
             <div class="mb-6 flex h-14 w-14 items-center justify-center border border-slate-100 bg-slate-50 text-slate-950 group-hover:border-primary group-hover:bg-primary group-hover:text-white transition-all duration-300">
-                <component :is="cat.icon" class="h-6 w-6" stroke-width="1.5" />
+                <component :is="getCategoryIcon(cat.icon)" class="h-6 w-6" stroke-width="1.5" />
             </div>
             <h3 class="font-bold text-slate-950 mb-2 uppercase tracking-wider text-xs">{{ cat.name }}</h3>
-            <p class="text-[10px] font-medium text-slate-400 uppercase tracking-[0.15em]">{{ cat.description }}</p>
+            <p v-if="cat.description" class="text-[10px] font-medium text-slate-400 uppercase tracking-[0.15em]">{{ cat.description }}</p>
           </NuxtLink>
         </div>
       </section>
@@ -140,7 +167,7 @@ const handleSearch = () => {
 
         <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-10">
           <NuxtLink
-            v-for="venue in discoveryData?.featuredVenues"
+            v-for="venue in discoveryData?.recommended"
             :key="venue.id"
             :to="NAVIGATION_PATHS.VENUE(venue.slug)"
             class="group block h-full border border-slate-100 bg-white hover:border-slate-200 transition-all duration-500 flex flex-col"
@@ -148,7 +175,7 @@ const handleSearch = () => {
             <!-- Image Area -->
             <div class="relative aspect-[4/5] overflow-hidden bg-slate-50 border-b border-slate-100">
               <img
-                :src="venue.portfolio?.find(m => m.featured)?.url || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80'"
+                :src="venue.media?.find(m => m.featured)?.url || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80'"
                 :alt="venue.name"
                 class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
               />

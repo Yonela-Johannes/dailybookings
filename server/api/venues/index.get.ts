@@ -1,26 +1,26 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from '~/server/utils/prisma'
 
 export default defineEventHandler(async (event) => {
-  const query = getQuery(event);
-  const { category, search, limit } = query;
-  const prisma = new PrismaClient();
+  const query = getQuery(event)
+  const { category, search, limit } = query
 
   const where: any = {
-    status: "active",
+    status: 'ACTIVE',
     deletedAt: null,
-  };
+  }
 
   if (category) {
     where.category = {
       slug: String(category),
-    };
+    }
   }
 
   if (search) {
     where.OR = [
-      { name: { contains: String(search), mode: "insensitive" } },
-      { description: { contains: String(search), mode: "insensitive" } },
-    ];
+      { name: { contains: String(search), mode: 'insensitive' } },
+      { description: { contains: String(search), mode: 'insensitive' } },
+      { tagline: { contains: String(search), mode: 'insensitive' } },
+    ]
   }
 
   try {
@@ -29,6 +29,7 @@ export default defineEventHandler(async (event) => {
       take: limit ? parseInt(limit as string) : undefined,
       include: {
         category: true,
+        address: true,
         media: {
           where: {
             featured: true,
@@ -36,15 +37,15 @@ export default defineEventHandler(async (event) => {
         },
       },
       orderBy: {
-        rating: "desc",
+        rating: 'desc',
       },
-    });
+    })
 
-    return venues;
+    return venues
   } catch (error: any) {
     throw createError({
       statusCode: 500,
       statusMessage: error.message,
-    });
+    })
   }
-});
+})

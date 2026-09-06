@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { serverSupabaseUser } from '#supabase/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '~/server/utils/prisma'
 import { calculateAvailableSlots } from '~/server/utils/availability'
 import { addMinutes, parse, format } from 'date-fns'
 
@@ -14,7 +14,7 @@ const bookingSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  const prisma = new PrismaClient()
+
   const user = await serverSupabaseUser(event)
   if (!user) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })

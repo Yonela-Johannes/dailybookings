@@ -1,30 +1,32 @@
 import { serverSupabaseUser, serverSupabaseClient } from '#supabase/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '~/server/utils/prisma'
+import { z } from 'zod'
+
+const querySchema = z.object({
+  id: z.string().uuid()
+})
 
 export default defineEventHandler(async (event) => {
-  const prisma = new PrismaClient()
   const user = await serverSupabaseUser(event)
   if (!user) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
 
   const query = getQuery(event)
-  const id = query.id as string
 
-  if (!id) {
-    throw createError({ statusCode: 400, statusMessage: 'Missing media id' })
-  }
+  try {
+    const { id } = querySchema.parse(query)
 
-  const media = await prisma.media.findUnique({
-    where: { id },
-    include: {
-      venue: {
-        include: {
-          business: true
+    const media = await prisma.media.findUnique({
+      where: { id },
+      include: {
+        venue: {
+          include: {
+            business: true
+          }
         }
       }
-    }
-  })
+    })
 
   if (!media) {
     throw createError({ statusCode: 404, statusMessage: 'Media not found' })
@@ -55,9 +57,17 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  await prisma.media.delete({
-    where: { id }
-  })
+    await prisma.media.delete({
+      where: { id }
+    })
 
-  return { success: true }
+    return { success: true }
+  } catch (error: any) {
+    if (error.statusCode) throw error
+    throw createError({
+      statusCode: 400,
+      statusMessage: error.message || 'Failed to delete media',
+      data: error.errors
+    })
+  }
 })

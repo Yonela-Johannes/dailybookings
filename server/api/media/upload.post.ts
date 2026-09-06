@@ -1,9 +1,9 @@
 import { serverSupabaseUser, serverSupabaseClient } from '#supabase/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '~/server/utils/prisma'
 import { MediaEntityType } from '@prisma/client'
 
 export default defineEventHandler(async (event) => {
-  const prisma = new PrismaClient()
+
   const user = await serverSupabaseUser(event)
   if (!user) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })

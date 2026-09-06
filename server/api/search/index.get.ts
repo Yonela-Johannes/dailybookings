@@ -1,87 +1,80 @@
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '~/server/utils/prisma'
+import { z } from 'zod'
+
+const querySchema = z.object({
+  q: z.string().optional(),
+  loc: z.string().optional(),
+  page: z.string().optional().transform(v => parseInt(v || '1')),
+  limit: z.string().optional().transform(v => parseInt(v || '10')),
+  categoryId: z.string().uuid().optional()
+})
 
 export default defineEventHandler(async (event) => {
-  const prisma = new PrismaClient()
   const query = getQuery(event)
-  const { q, loc } = query
-
-  if (!q && !loc) {
-    return {
-      venues: [],
-      services: [],
-      categories: []
-    }
-  }
-
-  const searchStr = q ? String(q) : ''
-  const locationStr = loc ? String(loc) : ''
 
   try {
-    const [venues, services, categories] = await Promise.all([
-      prisma.venue.findMany({
-        where: {
-          status: 'active',
-          deletedAt: null,
-          AND: [
-            searchStr ? {
-              OR: [
-                { name: { contains: searchStr, mode: 'insensitive' } },
-                { description: { contains: searchStr, mode: 'insensitive' } }
-              ]
-            } : {},
-            locationStr ? {
-              address: {
-                OR: [
-                  { city: { contains: locationStr, mode: 'insensitive' } },
-                  { suburb: { contains: locationStr, mode: 'insensitive' } }
-                ]
-              }
-            } : {}
+    const { q, loc, page, limit, categoryId } = querySchema.parse(query)
+    const skip = (page - 1) * limit
+
+    if (!q && !loc && !categoryId) {
+      return {
+        data: [],
+        meta: { total: 0, page, limit, totalPages: 0 }
+      }
+    }
+
+    const where: any = {
+      status: 'ACTIVE',
+      deletedAt: null,
+      AND: [
+        q ? {
+          OR: [
+            { name: { contains: q, mode: 'insensitive' } },
+            { description: { contains: q, mode: 'insensitive' } }
           ]
-        },
+        } : {},
+        loc ? {
+          address: {
+            OR: [
+              { city: { contains: loc, mode: 'insensitive' } },
+              { suburb: { contains: loc, mode: 'insensitive' } },
+              { region: { contains: loc, mode: 'insensitive' } }
+            ]
+          }
+        } : {},
+        categoryId ? { categoryId } : {}
+      ]
+    }
+
+    const [total, venues] = await Promise.all([
+      prisma.venue.count({ where }),
+      prisma.venue.findMany({
+        where,
         include: {
           category: true,
           media: { where: { featured: true } },
           address: true
         },
-        take: 10
-      }),
-      prisma.service.findMany({
-        where: {
-          OR: [
-            { name: { contains: searchStr, mode: 'insensitive' } },
-            { description: { contains: searchStr, mode: 'insensitive' } }
-          ]
+        orderBy: {
+          rating: 'desc'
         },
-        include: {
-          category: {
-            include: {
-              venue: {
-                include: {
-                  address: true
-                }
-              }
-            }
-          }
-        },
-        take: 10
-      }),
-      prisma.category.findMany({
-        where: {
-          name: { contains: searchStr, mode: 'insensitive' }
-        },
-        take: 5
+        skip,
+        take: limit
       })
     ])
 
     return {
-      venues,
-      services,
-      categories
+      data: venues,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
     }
   } catch (error: any) {
     throw createError({
-      statusCode: 500,
+      statusCode: 400,
       statusMessage: error.message
     })
   }

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '~/server/utils/prisma'
 import { isBusinessOwner } from '~/server/utils/auth'
 import { z } from 'zod'
 
@@ -55,7 +55,7 @@ const serviceActionSchema = z.discriminatedUnion('action', [
 ])
 
 export default defineEventHandler(async (event) => {
-  const prisma = new PrismaClient()
+
   const user = await isBusinessOwner(event)
   const body = await readBody(event)
 

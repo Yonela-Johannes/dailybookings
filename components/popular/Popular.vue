@@ -1,9 +1,36 @@
 <script setup lang="ts">
-import { ArrowUpRight } from "lucide-vue-next";
-import { CATEGORIES, NAVIGATION_PATHS } from "~/utils/constants";
+import {
+    ArrowUpRight,
+    Sparkles,
+    Scissors,
+    HeartPulse,
+    Dumbbell,
+    Camera,
+    GraduationCap,
+    House,
+    BriefcaseBusiness,
+} from "lucide-vue-next";
+import { NAVIGATION_PATHS } from "~/utils/constants";
+
+const { data: discovery, pending } = await useDiscovery();
+
+const ICON_MAP: Record<string, any> = {
+    sparkles: Sparkles,
+    scissors: Scissors,
+    "heart-pulse": HeartPulse,
+    dumbbell: Dumbbell,
+    camera: Camera,
+    "graduation-cap": GraduationCap,
+    house: House,
+    "briefcase-business": BriefcaseBusiness,
+};
 
 const fallbackImage =
     "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1200&q=85";
+
+const popularCategories = computed(
+    () => discovery.value?.popularCategories || [],
+);
 </script>
 
 <template>
@@ -47,53 +74,54 @@ const fallbackImage =
             </div>
 
             <div
+                v-if="pending"
                 class="mt-10 grid grid-cols-2 gap-px overflow-hidden border border-slate-200 bg-slate-200 sm:grid-cols-3 lg:grid-cols-4"
             >
+                <div
+                    v-for="i in 8"
+                    :key="i"
+                    class="aspect-[4/5] animate-pulse bg-slate-100"
+                />
+            </div>
+
+            <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <NuxtLink
-                    v-for="category in CATEGORIES"
+                    v-for="category in popularCategories"
                     :key="category.slug"
                     :to="NAVIGATION_PATHS.CATEGORY(category.slug)"
-                    class="group relative aspect-[4/5] overflow-hidden bg-slate-100"
+                    class="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary hover:shadow-xl"
                 >
+                    <div
+                        class="absolute right-0 top-0 h-32 w-32 translate-x-10 -translate-y-10 rounded-full bg-primary/5 transition-transform duration-500 group-hover:scale-125"
+                    />
+
                     <img
                         :src="category.image || fallbackImage"
                         :alt="category.name"
                         loading="lazy"
                         class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
                     />
-
-                    <div
-                        class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/5 transition-colors duration-300 group-hover:from-black/90"
-                    />
-
-                    <div
-                        class="absolute left-4 top-4 flex h-9 w-9 items-center justify-center border border-white/25 bg-black/20 text-white backdrop-blur-sm"
-                    >
-                        <component
-                            :is="category.icon"
-                            class="h-4 w-4"
-                            stroke-width="1.8"
-                        />
-                    </div>
-
-                    <div
-                        class="absolute right-4 top-4 flex h-9 w-9 translate-y-1 items-center justify-center border border-white/25 bg-white/0 text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:bg-white group-hover:text-slate-950 group-hover:opacity-100"
-                    >
-                        <ArrowUpRight class="h-4 w-4" stroke-width="1.8" />
-                    </div>
-
-                    <div class="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+                    <div class="relative mt-6">
                         <h3
-                            class="text-lg font-semibold tracking-tight text-white"
+                            class="text-xl font-semibold tracking-tight text-slate-950"
                         >
                             {{ category.name }}
                         </h3>
 
                         <p
-                            class="mt-1 text-xs leading-5 text-white/70 sm:text-sm"
+                            v-if="category.description"
+                            class="mt-2 line-clamp-2 text-sm leading-6 text-slate-500"
                         >
                             {{ category.description }}
                         </p>
+
+                        <div class="mt-5 flex items-center justify-between">
+                            <div
+                                class="flex h-9 w-9 items-center justify-center rounded-full text-slate-200 border border-slate-200 transition-all duration-300 group-hover:border-primary group-hover:bg-primary group-hover:text-white"
+                            >
+                                <ArrowUpRight class="h-4 w-4" />
+                            </div>
+                        </div>
                     </div>
                 </NuxtLink>
             </div>

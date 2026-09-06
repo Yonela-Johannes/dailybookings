@@ -188,10 +188,12 @@ model BookingConfig {
 }
 
 model Category {
-  id   String  @id @default(uuid())
-  name String  @unique
-  slug String  @unique
-  icon String?
+  id          String  @id @default(uuid())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  imageUrl    String?
+  icon        String?
 
   venues Venue[]
 }

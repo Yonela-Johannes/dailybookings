@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '~/server/utils/prisma'
 import { isPlatformAdmin } from '~/server/utils/auth'
 import { z } from 'zod'
 
@@ -8,7 +8,7 @@ const verifySchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  const prisma = new PrismaClient()
+
   await isPlatformAdmin(event)
   const id = getRouterParam(event, 'id')
   const body = await readBody(event)

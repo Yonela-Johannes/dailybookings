@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '~/server/utils/prisma'
 import { z } from 'zod'
 
 const createVenueSchema = z.object({
@@ -33,7 +33,7 @@ const createVenueSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  const prisma = new PrismaClient()
+
   // In a real app, we would verify the user session here
   // const user = event.context.user
 

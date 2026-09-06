@@ -1,5 +1,5 @@
 import { prisma } from './prisma'
-import { addMinutes, format, parse, isWithinInterval, startOfDay, endOfDay } from 'date-fns'
+import { addMinutes, format, parse, isWithinInterval, startOfDay, endOfDay, isBefore } from 'date-fns'
 
 interface Slot {
   startTime: string
@@ -9,7 +9,7 @@ interface Slot {
 export async function calculateAvailableSlots(
   venueId: string,
   serviceIds: string[],
-  employeeId: string | null,
+  employeeId: string | null | undefined,
   date: Date
 ) {
   const venue = await prisma.venue.findUnique({
@@ -27,11 +27,14 @@ export async function calculateAvailableSlots(
     where: { id: { in: serviceIds } },
   })
 
+  if (services.length === 0) return []
+
   const totalDuration = services.reduce((acc, s) => acc + s.durationMinutes, 0)
   const totalBuffer = services.reduce((acc, s) => acc + s.bufferMinutes, 0)
   const totalNeeded = totalDuration + totalBuffer
 
   // 2. Get Venue Working Hours for the day
+  // getDay() returns 0 for Sunday, 1 for Monday, etc.
   const dayOfWeek = date.getDay()
   const venueSchedule = venue.schedules.find((s) => s.day === dayOfWeek)
 
@@ -39,24 +42,37 @@ export async function calculateAvailableSlots(
     return []
   }
 
-  // 3. Get Employee Schedule if employee specified
-  let employeesToQuery = []
+  // 3. Get Employees who can perform THESE services
+  let employeesToQuery: string[] = []
   if (employeeId) {
     employeesToQuery = [employeeId]
   } else {
-    // If no employee specified, we check all employees who perform these services
+    // If no employee specified, we check all employees who perform ANY of these services
+    // For simplicity, we assume one employee does all services in this booking
+    // or we check if there's at least one employee who can do all of them.
     const employees = await prisma.employee.findMany({
       where: {
         venueId,
-        services: { some: { id: { in: serviceIds } } },
+        services: {
+          some: {
+            id: { in: serviceIds }
+          }
+        }
       },
+      select: { id: true }
     })
     employeesToQuery = employees.map((e) => e.id)
   }
 
   if (employeesToQuery.length === 0) return []
 
-  // 4. Get Existing Bookings for the day
+  // 4. Generate Potential Slots (e.g., every 15 minutes)
+  const slots: Slot[] = []
+  const timeFormat = 'HH:mm'
+  const start = parse(venueSchedule.opens, timeFormat, date)
+  const end = parse(venueSchedule.closes, timeFormat, date)
+
+  // 5. Fetch all relevant bookings once for performance
   const bookings = await prisma.booking.findMany({
     where: {
       venueId,
@@ -66,53 +82,62 @@ export async function calculateAvailableSlots(
       },
       status: { in: ['PENDING', 'CONFIRMED'] },
     },
+    include: {
+      services: {
+        select: { employeeId: true }
+      }
+    }
   })
 
-  // 5. Generate Potential Slots (e.g., every 15 minutes)
-  const slots: Slot[] = []
-  const start = parse(venueSchedule.opens, 'HH:mm', date)
-  const end = parse(venueSchedule.closes, 'HH:mm', date)
+  // 6. Fetch employee schedules once
+  const employeeSchedules = await prisma.employeeSchedule.findMany({
+    where: {
+      employeeId: { in: employeesToQuery },
+      day: dayOfWeek,
+      isWorking: true
+    }
+  })
 
   let current = start
   while (addMinutes(current, totalNeeded) <= end) {
-    const slotStart = format(current, 'HH:mm')
-    const slotEnd = format(addMinutes(current, totalDuration), 'HH:mm') // End time is without buffer for the customer
+    const slotStartStr = format(current, timeFormat)
+    const slotEndStr = format(addMinutes(current, totalDuration), timeFormat)
     const fullEnd = addMinutes(current, totalNeeded)
 
-    // Check if any employee is free for this slot
+    // Check if any employee who can do these services is free
     let employeeAvailable = false
 
     for (const empId of employeesToQuery) {
-      // Check employee schedule
-      const empSchedule = await prisma.employeeSchedule.findFirst({
-        where: { employeeId: empId, day: dayOfWeek, isWorking: true },
-      })
-
+      const empSchedule = employeeSchedules.find(s => s.employeeId === empId)
       if (!empSchedule || !empSchedule.startTime || !empSchedule.endTime) continue
 
-      const empStart = parse(empSchedule.startTime, 'HH:mm', date)
-      const empEnd = parse(empSchedule.endTime, 'HH:mm', date)
+      const empStart = parse(empSchedule.startTime, timeFormat, date)
+      const empEnd = parse(empSchedule.endTime, timeFormat, date)
 
+      // Slot must fit within employee working hours
       if (current < empStart || fullEnd > empEnd) continue
 
-      // Check existing bookings for this employee
-      const empBookings = bookings.filter((b) => b.employeeId === empId)
-      const isOverlapping = empBookings.some((b) => {
-        const bStart = parse(b.startTime, 'HH:mm', date)
-        const bEnd = parse(b.endTime, 'HH:mm', date)
-        // Check overlap (ignoring buffer for now, or include it if we store it)
-        // Realistically we should store the duration including buffer in the booking or check service buffers
+      // Check for overlapping bookings for this specific employee
+      const hasOverlap = bookings.some(b => {
+        const isAssignedToThisBooking = b.services.some(s => s.employeeId === empId)
+        if (!isAssignedToThisBooking) return false
+
+        const bStart = parse(b.startTime, timeFormat, date)
+        const bEnd = parse(b.endTime, timeFormat, date)
+
+        // Overlap logic: (start1 < end2) && (end1 > start2)
+        // We include buffer in the check if we want to be strict
         return (current < bEnd && fullEnd > bStart)
       })
 
-      if (!isOverlapping) {
+      if (!hasOverlap) {
         employeeAvailable = true
         break
       }
     }
 
     if (employeeAvailable) {
-      slots.push({ startTime: slotStart, endTime: slotEnd })
+      slots.push({ startTime: slotStartStr, endTime: slotEndStr })
     }
 
     current = addMinutes(current, 15) // Step by 15 mins

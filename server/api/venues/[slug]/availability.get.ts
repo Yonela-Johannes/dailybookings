@@ -1,8 +1,8 @@
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '~/server/utils/prisma'
 import { calculateAvailableSlots } from '~/server/utils/availability'
 
 export default defineEventHandler(async (event) => {
-  const prisma = new PrismaClient()
+
   const slug = getRouterParam(event, 'slug')
   const query = getQuery(event)
 

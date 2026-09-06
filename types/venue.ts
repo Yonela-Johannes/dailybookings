@@ -40,7 +40,7 @@ export interface VenueEmployee {
   name: string
   title?: string
   rating?: number
-  avatarUrl?: string
+  imageUrl?: string
 }
 
 export interface VenueReview {
@@ -51,6 +51,7 @@ export interface VenueReview {
   body: string
   serviceName?: string
   employeeName?: string
+  verified?: boolean
   postedAt: string
 }
 
@@ -67,9 +68,16 @@ export interface Venue {
   name: string
   tagline?: string
   description: string
+  verified?: boolean
   rating: number
   reviewCount: number
   reviewSummary?: string
+  category: {
+    id: string
+    name: string
+    slug: string
+    icon?: string
+  }
   tags: string[]
   address: VenueAddress
   phone?: string

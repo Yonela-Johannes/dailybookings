@@ -18,74 +18,42 @@ definePageMeta({
   middleware: 'auth'
 })
 
-// Mock data - In real app, fetch from /api/bookings
-const { data: bookings, pending } = await useAsyncData('dashboard-bookings', async () => {
-  // Simulate fetch delay
-  await new Promise(r => setTimeout(r, 500))
-  return [
-    {
-      id: 1,
-      customerName: 'Alice Johnson',
-      customerEmail: 'alice@example.com',
-      serviceName: 'Deep Tissue Massage',
-      startTime: '2024-06-20T10:00:00Z',
-      status: 'confirmed',
-      notes: 'Focus on lower back'
-    },
-    {
-      id: 2,
-      customerName: 'Bob Smith',
-      customerEmail: 'bob@example.com',
-      serviceName: 'Swedish Massage',
-      startTime: '2024-06-20T14:30:00Z',
-      status: 'pending',
-      notes: ''
-    },
-    {
-      id: 3,
-      customerName: 'Charlie Brown',
-      customerEmail: 'charlie@example.com',
-      serviceName: 'Facial Treatment',
-      startTime: '2024-06-15T11:00:00Z',
-      status: 'confirmed',
-      notes: 'First time client'
-    }
-  ]
-})
+// Fetch real user bookings from /api/bookings
+const { getBookingHistory } = useBookings()
+const { data: bookingsResponse, pending } = await getBookingHistory()
+const bookings = computed(() => bookingsResponse.value?.data || [])
 
 const now = new Date()
 
 const upcomingBookings = computed(() => {
-  if (!bookings.value) return []
   return bookings.value
-    .filter(b => isAfter(parseISO(b.startTime), now))
-    .sort((a, b) => parseISO(a.startTime).getTime() - parseISO(b.startTime).getTime())
+    .filter(b => isAfter(parseISO(b.date), now) || (format(parseISO(b.date), 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') && b.status === 'CONFIRMED'))
+    .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
 })
 
 const pastBookings = computed(() => {
-  if (!bookings.value) return []
   return bookings.value
-    .filter(b => isBefore(parseISO(b.startTime), now))
-    .sort((a, b) => parseISO(b.startTime).getTime() - parseISO(a.startTime).getTime())
+    .filter(b => isBefore(parseISO(b.date), now) && format(parseISO(b.date), 'yyyy-MM-dd') !== format(now, 'yyyy-MM-dd'))
+    .sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime())
 })
 
 const stats = computed(() => {
-  if (!bookings.value) return { total: 0, upcoming: 0, revenue: 0 }
   return {
     total: bookings.value.length,
     upcoming: upcomingBookings.value.length,
-    today: upcomingBookings.value.filter(b => {
-      const date = parseISO(b.startTime)
+    today: bookings.value.filter(b => {
+      const date = parseISO(b.date)
       return format(date, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd')
     }).length
   }
 })
 
 const getStatusColor = (status: string) => {
-  switch (status) {
+  switch (status.toLowerCase()) {
     case 'confirmed': return 'bg-green-50 text-green-700 border-green-100'
     case 'pending': return 'bg-yellow-50 text-yellow-700 border-yellow-100'
     case 'cancelled': return 'bg-red-50 text-red-700 border-red-100'
+    case 'completed': return 'bg-blue-50 text-blue-700 border-blue-100'
     default: return 'bg-slate-50 text-slate-700 border-slate-100'
   }
 }
@@ -154,12 +122,13 @@ const getStatusColor = (status: string) => {
         <div v-for="booking in upcomingBookings" :key="booking.id" class="p-6 hover:bg-slate-50/50 transition-colors group">
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div class="flex items-start gap-4">
-              <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0 font-bold">
-                {{ booking.customerName.charAt(0) }}
+              <div class="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 shrink-0 font-bold overflow-hidden">
+                <img v-if="booking.venue.media?.[0]?.url" :src="booking.venue.media[0].url" class="w-full h-full object-cover" />
+                <span v-else>{{ booking.venue.name.charAt(0) }}</span>
               </div>
               <div class="space-y-1">
                 <div class="flex items-center gap-3">
-                  <h3 class="font-bold text-slate-900">{{ booking.customerName }}</h3>
+                  <h3 class="font-bold text-slate-900">{{ booking.venue.name }}</h3>
                   <span
                     class="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full border"
                     :class="getStatusColor(booking.status)"
@@ -170,20 +139,23 @@ const getStatusColor = (status: string) => {
                 <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500">
                   <div class="flex items-center gap-1.5">
                     <Calendar class="w-3.5 h-3.5" />
-                    {{ format(parseISO(booking.startTime), 'PPP') }}
+                    {{ format(parseISO(booking.date), 'PPP') }}
                   </div>
                   <div class="flex items-center gap-1.5">
                     <Clock class="w-3.5 h-3.5" />
-                    {{ format(parseISO(booking.startTime), 'p') }}
+                    {{ booking.startTime }}
                   </div>
                   <div class="font-medium text-primary">
-                    {{ booking.serviceName }}
+                    {{ booking.services?.map(s => s.service.name).join(', ') }}
                   </div>
                 </div>
               </div>
             </div>
 
             <div class="flex items-center gap-3 md:self-center">
+              <NuxtLink :to="`/venue/${booking.venue.slug}`" class="px-4 py-2 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition-colors text-xs">
+                View Business
+              </NuxtLink>
               <button class="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors">
                 <MoreVertical class="w-5 h-5" />
               </button>
@@ -217,11 +189,11 @@ const getStatusColor = (status: string) => {
           </thead>
           <tbody class="divide-y divide-slate-100">
             <tr v-for="booking in pastBookings.slice(0, 5)" :key="booking.id" class="hover:bg-slate-50/30 transition-colors">
-              <td class="px-6 py-4 font-medium text-slate-900">{{ booking.customerName }}</td>
-              <td class="px-6 py-4 text-sm text-slate-500">{{ format(parseISO(booking.startTime), 'MMM d, yyyy') }}</td>
-              <td class="px-6 py-4 text-sm text-slate-500">{{ booking.serviceName }}</td>
+              <td class="px-6 py-4 font-medium text-slate-900">{{ booking.venue.name }}</td>
+              <td class="px-6 py-4 text-sm text-slate-500">{{ format(parseISO(booking.date), 'MMM d, yyyy') }}</td>
+              <td class="px-6 py-4 text-sm text-slate-500">{{ booking.services?.map(s => s.service.name).join(', ') }}</td>
               <td class="px-6 py-4 text-right">
-                <span class="text-xs font-bold text-slate-400 uppercase">{{ booking.status }}</span>
+                <span class="text-xs font-bold uppercase" :class="booking.status === 'CANCELLED' ? 'text-red-400' : 'text-slate-400'">{{ booking.status }}</span>
               </td>
             </tr>
           </tbody>

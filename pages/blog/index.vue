@@ -10,7 +10,16 @@ useHead({
     ]
 });
 
-const { data: articles, pending } = useAsyncData('articles', () => $fetch('/api/blog'));
+const route = useRoute()
+const category = computed(() => route.query.category as string)
+
+const { data: articles, refresh, pending } = useAsyncData('articles', () => $fetch('/api/blog', {
+    params: {
+        category: category.value
+    }
+}), {
+    watch: [category]
+});
 
 function formatDate(date: string) {
     return new Date(date).toLocaleDateString("en-ZA", {

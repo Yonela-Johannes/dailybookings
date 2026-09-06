@@ -1,13 +1,13 @@
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '~/server/utils/prisma'
 
 export default defineEventHandler(async () => {
-  const prisma = new PrismaClient()
+
   try {
-    const [featuredVenues, popularCategories, trendingServices] = await Promise.all([
-      // featuredVenues: highly rated, verified, with featured media
+    const [recommended, trending, newArrivals, popularCategories] = await Promise.all([
+      // recommended: highly rated, verified
       prisma.venue.findMany({
         where: {
-          status: 'active',
+          status: 'ACTIVE',
           business: {
             verified: true
           }
@@ -15,15 +15,65 @@ export default defineEventHandler(async () => {
         orderBy: {
           rating: 'desc'
         },
-        take: 6,
+        take: 8,
         include: {
           media: {
             where: { featured: true }
           },
-          category: true
+          category: true,
+          address: true,
+          business: {
+            select: {
+              verified: true
+            }
+          }
         }
       }),
-      // popularCategories: categories with most venues
+      // trending: popular services' venues (simulated by rating for now)
+      prisma.venue.findMany({
+        where: {
+          status: 'ACTIVE'
+        },
+        orderBy: {
+          reviewCount: 'desc'
+        },
+        take: 8,
+        include: {
+          media: {
+            where: { featured: true }
+          },
+          category: true,
+          address: true,
+          business: {
+            select: {
+              verified: true
+            }
+          }
+        }
+      }),
+      // newArrivals: recently created
+      prisma.venue.findMany({
+        where: {
+          status: 'ACTIVE'
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
+        take: 8,
+        include: {
+          media: {
+            where: { featured: true }
+          },
+          category: true,
+          address: true,
+          business: {
+            select: {
+              verified: true
+            }
+          }
+        }
+      }),
+      // popularCategories
       prisma.category.findMany({
         include: {
           _count: {
@@ -36,33 +86,14 @@ export default defineEventHandler(async () => {
           }
         },
         take: 8
-      }),
-      // trendingServices: services marked as popular
-      prisma.service.findMany({
-        where: {
-          popular: true
-        },
-        take: 10,
-        include: {
-          category: {
-            include: {
-              venue: {
-                include: {
-                  media: {
-                    where: { featured: true }
-                  }
-                }
-              }
-            }
-          }
-        }
       })
     ])
 
     return {
-      featuredVenues,
-      popularCategories,
-      trendingServices
+      recommended,
+      trending,
+      newArrivals,
+      popularCategories
     }
   } catch (error: any) {
     throw createError({

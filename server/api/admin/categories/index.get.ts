@@ -1,8 +1,7 @@
-import { PrismaClient } from '@prisma/client'
 import { isPlatformAdmin } from '~/server/utils/auth'
+import { prisma } from '~/server/utils/prisma'
 
 export default defineEventHandler(async (event) => {
-  const prisma = new PrismaClient()
   await isPlatformAdmin(event)
 
   const categories = await prisma.category.findMany({

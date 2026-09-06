@@ -1,55 +1,15 @@
 <script setup lang="ts">
 import { ArrowRight, ArrowUpRight } from "lucide-vue-next";
 
-interface BlogPost {
-    title: string;
-    excerpt: string;
-    category: string;
-    date: string;
-    readTime: string;
-    image: string;
-    to: string;
-}
+const { data: blogResponse, pending } = await useBlogs({ limit: 3 });
 
-const posts: BlogPost[] = [
-    {
-        title: "How to find the right professional for you",
-        excerpt:
-            "A simple guide to choosing trusted service providers and getting the most from your booking.",
-        category: "Guides",
-        date: "Sep 04, 2026",
-        readTime: "5 min read",
-        image: "/images/blog/find-the-right-professional.jpg",
-        to: "/blog/how-to-find-the-right-professional",
-    },
-    {
-        title: "The best local services to book this month",
-        excerpt:
-            "From beauty and wellness to home services, discover what's worth booking right now.",
-        category: "Discover",
-        date: "Aug 28, 2026",
-        readTime: "4 min read",
-        image: "/images/blog/local-services.jpg",
-        to: "/blog/best-local-services",
-    },
-    {
-        title: "Why booking local makes a difference",
-        excerpt:
-            "Meet the people behind local businesses and see how your next booking can support your community.",
-        category: "Community",
-        date: "Aug 21, 2026",
-        readTime: "6 min read",
-        image: "/images/blog/booking-local.jpg",
-        to: "/blog/booking-local",
-    },
-];
-
-const featuredPost = posts[0];
-const secondaryPosts = posts.slice(1);
+const posts = computed(() => blogResponse.value?.data || []);
+const featuredPost = computed(() => posts.value[0]);
+const secondaryPosts = computed(() => posts.value.slice(1));
 </script>
 
 <template>
-    <section class="border-t border-slate-200 bg-white">
+    <section v-if="posts.length" class="border-t border-slate-200 bg-white">
         <div class="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
             <!-- Header -->
             <div
@@ -89,14 +49,22 @@ const secondaryPosts = posts.slice(1);
             </div>
 
             <!-- Blog grid -->
-            <div class="mt-10 grid gap-6 lg:grid-cols-[1.25fr_1fr]">
+            <div v-if="pending" class="mt-10 grid gap-6 lg:grid-cols-[1.25fr_1fr]">
+                <div class="aspect-video animate-pulse bg-slate-100" />
+                <div class="space-y-6">
+                    <div v-for="i in 2" :key="i" class="h-40 animate-pulse bg-slate-100" />
+                </div>
+            </div>
+
+            <div v-else class="mt-10 grid gap-6 lg:grid-cols-[1.25fr_1fr]">
                 <!-- Featured article -->
                 <NuxtLink
-                    :to="featuredPost.to"
+                    v-if="featuredPost"
+                    :to="`/blog/${featuredPost.slug}`"
                     class="group relative min-h-[440px] overflow-hidden bg-slate-900 lg:min-h-[520px]"
                 >
                     <img
-                        :src="featuredPost.image"
+                        :src="featuredPost.featuredImage || '/images/blog/placeholder.jpg'"
                         :alt="featuredPost.title"
                         loading="lazy"
                         class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
@@ -109,13 +77,10 @@ const secondaryPosts = posts.slice(1);
                     <div class="absolute inset-x-0 bottom-0 p-6 sm:p-8">
                         <div class="flex items-center gap-3">
                             <span
+                                v-if="featuredPost.category"
                                 class="bg-white px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-950"
                             >
-                                {{ featuredPost.category }}
-                            </span>
-
-                            <span class="text-xs text-white/70">
-                                {{ featuredPost.readTime }}
+                                {{ featuredPost.category.name }}
                             </span>
                         </div>
 
@@ -126,6 +91,7 @@ const secondaryPosts = posts.slice(1);
                         </h3>
 
                         <p
+                            v-if="featuredPost.excerpt"
                             class="mt-3 max-w-xl text-sm leading-6 text-white/70"
                         >
                             {{ featuredPost.excerpt }}
@@ -144,11 +110,11 @@ const secondaryPosts = posts.slice(1);
                 </NuxtLink>
 
                 <!-- Secondary articles -->
-                <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-1">
+                <div v-if="secondaryPosts.length" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-1">
                     <NuxtLink
                         v-for="post in secondaryPosts"
-                        :key="post.to"
-                        :to="post.to"
+                        :key="post.slug"
+                        :to="`/blog/${post.slug}`"
                         class="group grid grid-cols-[140px_1fr] border border-slate-200 bg-white sm:grid-cols-[180px_1fr] lg:grid-cols-[200px_1fr]"
                     >
                         <!-- Image -->
@@ -156,7 +122,7 @@ const secondaryPosts = posts.slice(1);
                             class="relative min-h-[180px] overflow-hidden bg-slate-100"
                         >
                             <img
-                                :src="post.image"
+                                :src="post.featuredImage || '/images/blog/placeholder.jpg'"
                                 :alt="post.title"
                                 loading="lazy"
                                 class="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
@@ -167,13 +133,10 @@ const secondaryPosts = posts.slice(1);
                         <div class="flex flex-col justify-center p-5 sm:p-6">
                             <div class="flex items-center gap-3">
                                 <span
+                                    v-if="post.category"
                                     class="text-[10px] font-bold uppercase tracking-[0.12em] text-primary"
                                 >
-                                    {{ post.category }}
-                                </span>
-
-                                <span class="text-[11px] text-slate-400">
-                                    {{ post.readTime }}
+                                    {{ post.category.name }}
                                 </span>
                             </div>
 
@@ -184,6 +147,7 @@ const secondaryPosts = posts.slice(1);
                             </h3>
 
                             <p
+                                v-if="post.excerpt"
                                 class="mt-2 line-clamp-2 text-xs leading-5 text-slate-500 sm:text-sm"
                             >
                                 {{ post.excerpt }}
@@ -214,35 +178,35 @@ const secondaryPosts = posts.slice(1);
                 </span>
 
                 <NuxtLink
-                    to="/blog/guides"
+                    to="/blog?category=guides"
                     class="text-sm text-slate-500 transition-colors hover:text-primary"
                 >
                     Guides
                 </NuxtLink>
 
                 <NuxtLink
-                    to="/blog/beauty"
+                    to="/blog?category=beauty"
                     class="text-sm text-slate-500 transition-colors hover:text-primary"
                 >
                     Beauty
                 </NuxtLink>
 
                 <NuxtLink
-                    to="/blog/wellness"
+                    to="/blog?category=wellness"
                     class="text-sm text-slate-500 transition-colors hover:text-primary"
                 >
                     Wellness
                 </NuxtLink>
 
                 <NuxtLink
-                    to="/blog/business"
+                    to="/blog?category=business"
                     class="text-sm text-slate-500 transition-colors hover:text-primary"
                 >
                     Business
                 </NuxtLink>
 
                 <NuxtLink
-                    to="/blog/community"
+                    to="/blog?category=community"
                     class="text-sm text-slate-500 transition-colors hover:text-primary"
                 >
                     Community

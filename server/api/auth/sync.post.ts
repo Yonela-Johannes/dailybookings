@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '~/server/utils/prisma'
 import { z } from 'zod'
 
 const syncUserSchema = z.object({
@@ -10,7 +10,7 @@ const syncUserSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  const prisma = new PrismaClient()
+
   const body = await readBody(event)
 
   try {

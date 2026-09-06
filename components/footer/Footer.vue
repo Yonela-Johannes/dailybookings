@@ -160,7 +160,7 @@ const socialLinks = [
                         </p>
 
                         <NuxtLink
-                            to="/app"
+                            to="/"
                             class="inline-flex h-10 items-center gap-2 border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-900 transition-colors hover:border-slate-900 hover:bg-slate-900 hover:text-white"
                         >
                             <Apple class="h-4 w-4" stroke-width="1.8" />

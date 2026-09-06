@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { serverSupabaseUser } from '#supabase/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '~/server/utils/prisma'
 
 const reviewSchema = z.object({
   venueId: z.string(),
@@ -10,7 +10,7 @@ const reviewSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  const prisma = new PrismaClient()
+
   const user = await serverSupabaseUser(event)
   if (!user) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })

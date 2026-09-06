@@ -1,36 +1,56 @@
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '~/server/utils/prisma'
+import { z } from 'zod'
+
+const querySchema = z.object({
+  page: z.string().optional().transform(v => parseInt(v || '1')),
+  limit: z.string().optional().transform(v => parseInt(v || '10')),
+  category: z.string().optional()
+})
 
 export default defineEventHandler(async (event) => {
-  const prisma = new PrismaClient()
   const query = getQuery(event)
-  const { limit, category } = query
-
-  const where: any = {
-    published: true
-  }
-
-  if (category) {
-    where.category = {
-      slug: String(category)
-    }
-  }
 
   try {
-    const blogs = await prisma.blog.findMany({
-      where,
-      take: limit ? parseInt(limit as string) : undefined,
-      include: {
-        category: true
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    })
+    const { page, limit, category } = querySchema.parse(query)
+    const skip = (page - 1) * limit
 
-    return blogs
+    const where: any = {
+      published: true
+    }
+
+    if (category) {
+      where.category = {
+        slug: category
+      }
+    }
+
+    const [total, blogs] = await Promise.all([
+      prisma.blog.count({ where }),
+      prisma.blog.findMany({
+        where,
+        include: {
+          category: true
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
+        skip,
+        take: limit
+      })
+    ])
+
+    return {
+      data: blogs,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    }
   } catch (error: any) {
     throw createError({
-      statusCode: 500,
+      statusCode: 400,
       statusMessage: error.message
     })
   }
