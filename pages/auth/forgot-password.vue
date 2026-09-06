@@ -47,12 +47,6 @@ async function handleResetRequest() {
         >
             <div class="w-full max-w-md">
                 <div class="mb-8 text-center">
-                    <div
-                        class="mx-auto flex h-12 w-12 items-center justify-center border border-slate-200 bg-white text-primary shadow-sm"
-                    >
-                        <CalendarDays class="h-6 w-6" />
-                    </div>
-
                     <h1
                         class="mt-6 text-3xl font-semibold tracking-tight text-slate-950"
                     >

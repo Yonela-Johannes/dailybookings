@@ -7,15 +7,29 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "prisma db seed"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "nuxt": "latest",
     "@nuxtjs/supabase": "latest",
     "@nuxtjs/tailwindcss": "latest",
-    "lucide-vue-next": "latest",
-    "date-fns": "latest",
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
     "clsx": "latest",
-    "tailwind-merge": "latest"
+    "date-fns": "latest",
+    "lucide-vue-next": "latest",
+    "nuxt": "latest",
+    "pg": "^8.23.0",
+    "prisma": "^7.10.0",
+    "tailwind-merge": "latest",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.13"
   }
 }

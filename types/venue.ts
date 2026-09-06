@@ -8,9 +8,16 @@ export interface VenueAddress {
   lng: number
 }
 
-export interface VenueImage {
+export interface Media {
+  id: string
+  venueId: string
   url: string
-  alt: string
+  alt?: string
+  type: 'image' | 'video'
+  featured: boolean
+  entityType: 'VENUE' | 'EMPLOYEE' | 'PORTFOLIO' | 'BLOG'
+  category?: string
+  createdAt: string
 }
 
 export interface VenueService {
@@ -66,11 +73,10 @@ export interface Venue {
   tags: string[]
   address: VenueAddress
   phone?: string
-  images: VenueImage[]
+  media: Media[]
   serviceCategories: VenueServiceCategory[]
   team: VenueEmployee[]
   reviews: VenueReview[]
-  portfolio: VenueImage[]
   hours: OpeningHours[]
   amenities: string[]
 }

@@ -2,13 +2,7 @@
 import {
     ArrowLeft,
     ArrowRight,
-    BriefcaseBusiness,
-    CalendarDays,
     ChevronRight,
-    CircleEllipsis,
-    GraduationCap,
-    HeartPulse,
-    House,
     LayoutDashboard,
     LogOut,
     Menu,
@@ -16,6 +10,7 @@ import {
     X,
 } from "lucide-vue-next";
 import { onBeforeUnmount, onMounted, ref } from "vue";
+import { CATEGORIES, NAVIGATION_PATHS, POPULAR_SERVICES } from "~/utils/constants";
 
 const user = useSupabaseUser();
 const client = useSupabaseClient();
@@ -24,97 +19,6 @@ const isScrolled = ref(false);
 const menuOpen = ref(false);
 const exploreOpen = ref(false);
 const activeCategory = ref<string | null>(null);
-
-const exploreCategories = [
-    {
-        name: "Business",
-        description: "Professional services for businesses and teams.",
-        icon: BriefcaseBusiness,
-        services: [
-            "Business Consulting",
-            "Marketing Services",
-            "Web Design",
-            "Graphic Design",
-            "Accounting",
-            "Virtual Assistants",
-        ],
-    },
-    {
-        name: "Events & Entertainers",
-        description: "Find professionals to make your event memorable.",
-        icon: CalendarDays,
-        services: [
-            "Photographers",
-            "DJs",
-            "Catering",
-            "Event Planners",
-            "Magicians",
-            "Musicians",
-        ],
-    },
-    {
-        name: "Health & Wellness",
-        description: "Look after your body, mind and wellbeing.",
-        icon: HeartPulse,
-        services: [
-            "Personal Trainers",
-            "Massage",
-            "Life Coaching",
-            "Nutritionists",
-            "Yoga",
-            "Therapists",
-        ],
-    },
-    {
-        name: "House & Home",
-        description: "Trusted professionals for your home.",
-        icon: House,
-        services: [
-            "House Cleaning",
-            "Garden Services",
-            "Plumbers",
-            "Electricians",
-            "Handymen",
-            "Moving Services",
-        ],
-    },
-    {
-        name: "Lessons & Training",
-        description: "Learn something new or improve your skills.",
-        icon: GraduationCap,
-        services: [
-            "Tutors",
-            "Driving Lessons",
-            "Music Lessons",
-            "Language Lessons",
-            "Fitness Training",
-            "Career Coaching",
-        ],
-    },
-    {
-        name: "More",
-        description: "Discover more services on DailyBookings.",
-        icon: CircleEllipsis,
-        services: [
-            "Beauty",
-            "Photography",
-            "Pet Services",
-            "Technology",
-            "Creative Services",
-            "Other Services",
-        ],
-    },
-];
-
-const popularServices = [
-    "Dog & Pet Grooming",
-    "Dog Training",
-    "Dog Walking",
-    "Life Coaching",
-    "Limousine Hire",
-    "Magician",
-    "Private Investigators",
-];
 
 const handleScroll = () => {
     isScrolled.value = window.scrollY > 20;
@@ -165,7 +69,7 @@ const selectCategory = (category: string) => {
 };
 
 const getActiveCategory = () => {
-    return exploreCategories.find(
+    return CATEGORIES.find(
         (category) => category.name === activeCategory.value,
     );
 };
@@ -186,7 +90,7 @@ const handleLogout = async () => {
     closeMenu();
     await client.auth.signOut();
 
-    navigateTo("/auth/login");
+    navigateTo(NAVIGATION_PATHS.LOGIN);
 };
 </script>
 
@@ -203,7 +107,7 @@ const handleLogout = async () => {
             class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8"
         >
             <NuxtLink
-                to="/"
+                :to="NAVIGATION_PATHS.HOME"
                 class="relative z-10 flex shrink-0 items-center"
                 @click="closeMenu"
             >
@@ -241,7 +145,7 @@ const handleLogout = async () => {
                 >
                     <NuxtLink
                         v-if="isScrolled"
-                        to="/services"
+                        :to="NAVIGATION_PATHS.DISCOVER"
                         class="hidden h-10 items-center gap-2 px-3 text-sm font-semibold text-slate-700 transition-colors hover:text-primary sm:inline-flex"
                     >
                         <Search class="h-4 w-4" />
@@ -251,7 +155,7 @@ const handleLogout = async () => {
 
                 <!-- FOR BUSINESS -->
                 <NuxtLink
-                    to="/providers"
+                    :to="NAVIGATION_PATHS.BUSINESS"
                     class="hidden h-10 items-center px-3 text-sm font-semibold transition-colors md:inline-flex"
                     :class="
                         isScrolled
@@ -265,7 +169,7 @@ const handleLogout = async () => {
                 <!-- SIGN IN / SIGN UP -->
                 <NuxtLink
                     v-if="!user"
-                    to="/auth/login"
+                    :to="NAVIGATION_PATHS.LOGIN"
                     class="hidden h-10 items-center border-b px-4 text-sm font-semibold transition-all sm:inline-flex"
                     :class="
                         isScrolled
@@ -388,9 +292,9 @@ const handleLogout = async () => {
                                         class="grid grid-cols-1 sm:grid-cols-2"
                                     >
                                         <NuxtLink
-                                            v-for="service in popularServices"
+                                            v-for="service in POPULAR_SERVICES"
                                             :key="service"
-                                            :to="`/services?search=${encodeURIComponent(service)}`"
+                                            :to="`${NAVIGATION_PATHS.SEARCH}?search=${encodeURIComponent(service)}`"
                                             class="flex items-center justify-between px-3 py-2.5 text-sm text-slate-700 transition-colors hover:bg-slate-100 hover:text-primary"
                                             @click="closeMenu"
                                         >
@@ -438,7 +342,7 @@ const handleLogout = async () => {
                                 <!-- GUEST -->
                                 <NuxtLink
                                     v-else
-                                    to="/auth/login"
+                                    :to="NAVIGATION_PATHS.LOGIN"
                                     class="flex items-center justify-center bg-primary px-3 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
                                     @click="closeMenu"
                                 >
@@ -449,7 +353,7 @@ const handleLogout = async () => {
                                     class="mt-4 border-t border-slate-200 pt-4"
                                 >
                                     <NuxtLink
-                                        to="/help"
+                                        :to="NAVIGATION_PATHS.HELP"
                                         class="flex items-center px-3 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
                                         @click="closeMenu"
                                     >
@@ -457,7 +361,7 @@ const handleLogout = async () => {
                                     </NuxtLink>
 
                                     <NuxtLink
-                                        to="/providers"
+                                        :to="NAVIGATION_PATHS.BUSINESS"
                                         class="flex items-center justify-between px-3 py-3 text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-100"
                                         @click="closeMenu"
                                     >
@@ -530,7 +434,7 @@ const handleLogout = async () => {
                                             v-for="service in getActiveCategory()
                                                 ?.services"
                                             :key="service"
-                                            :to="`/services?search=${encodeURIComponent(service)}`"
+                                            :to="`${NAVIGATION_PATHS.SEARCH}?search=${encodeURIComponent(service)}`"
                                             class="flex items-center justify-between px-3 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-primary"
                                             @click="closeMenu"
                                         >
@@ -551,7 +455,7 @@ const handleLogout = async () => {
                                 class="grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3"
                             >
                                 <button
-                                    v-for="category in exploreCategories"
+                                    v-for="category in CATEGORIES"
                                     :key="category.name"
                                     type="button"
                                     class="group flex items-center gap-3 px-3 py-4 text-left transition-colors hover:bg-slate-100"

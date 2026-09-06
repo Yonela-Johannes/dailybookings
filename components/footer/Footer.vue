@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import {
     Apple,
+    BriefcaseBusiness,
     ChevronDown,
     Facebook,
+    HelpCircle,
     Instagram,
     Linkedin,
+    Search,
     Smartphone,
+    Users,
 } from "lucide-vue-next";
 import { ref } from "vue";
+import { NAVIGATION_PATHS } from "~/utils/constants";
 
 const openSection = ref<string | null>(null);
 
@@ -19,86 +24,77 @@ const footerSections = [
     {
         id: "customers",
         title: "For Customers",
+        icon: Search,
         links: [
             {
                 label: "Find a Service",
-                to: "/services",
+                to: NAVIGATION_PATHS.DISCOVER,
             },
             {
                 label: "Explore Categories",
-                to: "/categories",
+                to: NAVIGATION_PATHS.DISCOVER,
+            },
+            {
+                label: "Popular Services",
+                to: NAVIGATION_PATHS.SEARCH,
             },
             {
                 label: "How DailyBookings Works",
                 to: "/how-it-works",
             },
             {
-                label: "Popular Services",
-                to: "/services",
-            },
-            {
                 label: "Help & Support",
-                to: "/help",
+                to: NAVIGATION_PATHS.HELP,
             },
         ],
     },
     {
         id: "business",
         title: "For Businesses",
+        icon: BriefcaseBusiness,
         links: [
             {
-                label: "Become a Provider",
-                to: "/providers",
+                label: "Become a Professional",
+                to: NAVIGATION_PATHS.BUSINESS,
             },
             {
                 label: "Why DailyBookings?",
-                to: "/providers",
+                to: NAVIGATION_PATHS.BUSINESS,
             },
             {
-                label: "How It Works",
-                to: "/providers/how-it-works",
-            },
-            {
-                label: "Provider Features",
-                to: "/providers/features",
-            },
-            {
-                label: "Pricing",
-                to: "/providers/pricing",
+                label: "Professional Features",
+                to: NAVIGATION_PATHS.BUSINESS,
             },
             {
                 label: "Get Started",
-                to: "/providers",
+                to: NAVIGATION_PATHS.BUSINESS,
             },
         ],
     },
     {
         id: "dailybookings",
         title: "DailyBookings",
+        icon: Users,
         links: [
             {
                 label: "About Us",
-                to: "/about",
+                to: NAVIGATION_PATHS.ABOUT,
             },
             {
                 label: "Careers",
-                to: "/careers",
+                to: NAVIGATION_PATHS.CAREERS,
             },
             {
                 label: "Blog",
-                to: "/blog",
+                to: NAVIGATION_PATHS.BLOG,
             },
             {
                 label: "Contact Us",
-                to: "/contact",
+                to: NAVIGATION_PATHS.CONTACT,
             },
             {
                 label: "Help Centre",
-                to: "/help",
-            },
-            {
-                label: "Sitemap",
-                to: "/sitemap",
+                to: NAVIGATION_PATHS.HELP,
             },
         ],
     },
@@ -126,34 +122,40 @@ const socialLinks = [
 <template>
     <footer class="border-t border-slate-200 bg-slate-50 text-slate-900">
         <div class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
-            <!-- MAIN FOOTER -->
             <div
-                class="grid gap-12 md:grid-cols-2 lg:grid-cols-[1.25fr_1fr_1fr_1fr_1fr]"
+                class="grid gap-12 md:grid-cols-2 lg:grid-cols-[1.35fr_1fr_1fr_1fr]"
             >
                 <!-- BRAND -->
                 <div>
-                    <NuxtLink to="/" class="inline-flex items-center">
+                    <NuxtLink
+                        :to="NAVIGATION_PATHS.HOME"
+                        class="inline-flex items-center"
+                    >
                         <img
                             src="/logo.png"
                             alt="DailyBookings"
                             class="h-9 w-auto rounded-md"
                         />
                     </NuxtLink>
-
                     <p class="mt-6 max-w-xs text-sm leading-6 text-slate-500">
                         Discover trusted local professionals and book services
                         that fit your life.
                     </p>
 
-                    <!-- LOCATION -->
                     <div class="mt-5 text-sm leading-6 text-slate-500">
                         <p>South Africa</p>
                         <p>Made for local communities.</p>
                     </div>
 
-                    <!-- GET THE APP -->
+                    <!-- APP -->
                     <div class="mt-7">
-                        <p class="mb-3 text-sm font-semibold text-slate-900">
+                        <p
+                            class="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900"
+                        >
+                            <Smartphone
+                                class="h-4 w-4 text-primary"
+                                stroke-width="1.8"
+                            />
                             Get the app
                         </p>
 
@@ -161,8 +163,8 @@ const socialLinks = [
                             to="/app"
                             class="inline-flex h-10 items-center gap-2 border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-900 transition-colors hover:border-slate-900 hover:bg-slate-900 hover:text-white"
                         >
-                            <Smartphone class="h-4 w-4" />
-                            Get the app
+                            <Apple class="h-4 w-4" stroke-width="1.8" />
+                            Download the app
                         </NuxtLink>
                     </div>
 
@@ -177,25 +179,37 @@ const socialLinks = [
                             rel="noopener noreferrer"
                             class="flex h-10 w-10 items-center justify-center border border-slate-200 bg-white text-slate-500 transition-colors hover:border-primary hover:bg-primary hover:text-white"
                         >
-                            <component :is="social.icon" class="h-4 w-4" />
+                            <component
+                                :is="social.icon"
+                                class="h-4 w-4"
+                                stroke-width="1.8"
+                            />
                         </a>
                     </div>
                 </div>
 
-                <!-- FOOTER COLUMNS -->
+                <!-- FOOTER SECTIONS -->
                 <div
                     v-for="section in footerSections"
                     :key="section.id"
                     class="border-t border-slate-200 pt-5 md:border-0 md:pt-0"
                 >
-                    <!-- SECTION TITLE -->
+                    <!-- SECTION HEADER -->
                     <button
                         type="button"
                         class="flex w-full items-center justify-between text-left md:pointer-events-none"
                         @click="toggleSection(section.id)"
                     >
-                        <span class="text-sm font-semibold text-slate-900">
-                            {{ section.title }}
+                        <span class="flex items-center gap-2.5">
+                            <component
+                                :is="section.icon"
+                                class="h-4 w-4 text-primary"
+                                stroke-width="1.8"
+                            />
+
+                            <span class="text-sm font-semibold text-slate-900">
+                                {{ section.title }}
+                            </span>
                         </span>
 
                         <ChevronDown
@@ -203,6 +217,7 @@ const socialLinks = [
                             :class="
                                 openSection === section.id ? 'rotate-180' : ''
                             "
+                            stroke-width="1.8"
                         />
                     </button>
 
@@ -232,47 +247,50 @@ const socialLinks = [
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- SOCIAL / APP -->
-                <div class="border-t border-slate-200 pt-5 md:border-0 md:pt-0">
-                    <p class="text-sm font-semibold text-slate-900">
-                        Find us on social
+            <!-- SOCIAL / COMMUNITY -->
+            <div
+                class="mt-14 grid gap-8 border-t border-slate-200 pt-10 md:grid-cols-2 lg:mt-16 lg:grid-cols-[1fr_auto]"
+            >
+                <div>
+                    <p
+                        class="flex items-center gap-2 text-sm font-semibold text-slate-900"
+                    >
+                        <Users
+                            class="h-4 w-4 text-primary"
+                            stroke-width="1.8"
+                        />
+                        Stay connected
                     </p>
 
-                    <ul class="mt-5 space-y-3">
-                        <li v-for="social in socialLinks" :key="social.label">
-                            <a
-                                :href="social.href"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-primary"
-                            >
-                                <component :is="social.icon" class="h-4 w-4" />
+                    <p class="mt-2 max-w-lg text-sm leading-6 text-slate-500">
+                        Follow DailyBookings for local businesses, services,
+                        stories and inspiration from our community.
+                    </p>
+                </div>
 
-                                {{ social.label }}
-                            </a>
-                        </li>
-                    </ul>
-
-                    <!-- MOBILE APP -->
-                    <div class="mt-7">
-                        <p class="text-sm font-semibold text-slate-900">
-                            Mobile app
-                        </p>
-
-                        <NuxtLink
-                            to="/app"
-                            class="mt-3 inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-primary"
-                        >
-                            <Apple class="h-4 w-4" />
-                            Download DailyBookings
-                        </NuxtLink>
-                    </div>
+                <div class="flex items-center gap-2">
+                    <a
+                        v-for="social in socialLinks"
+                        :key="social.label"
+                        :href="social.href"
+                        :aria-label="social.label"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="flex h-10 w-10 items-center justify-center border border-slate-200 bg-white text-slate-500 transition-colors hover:border-primary hover:bg-primary hover:text-white"
+                    >
+                        <component
+                            :is="social.icon"
+                            class="h-4 w-4"
+                            stroke-width="1.8"
+                        />
+                    </a>
                 </div>
             </div>
 
             <!-- DIVIDER -->
-            <div class="mt-14 border-t border-slate-200 lg:mt-20" />
+            <div class="mt-10 border-t border-slate-200 lg:mt-12" />
 
             <!-- BOTTOM -->
             <div
@@ -285,23 +303,31 @@ const socialLinks = [
 
                 <div class="flex flex-wrap gap-x-5 gap-y-2">
                     <NuxtLink
-                        to="/terms"
+                        :to="NAVIGATION_PATHS.TERMS"
                         class="transition-colors hover:text-slate-700"
                     >
                         Terms
                     </NuxtLink>
 
                     <NuxtLink
-                        to="/privacy"
+                        :to="NAVIGATION_PATHS.PRIVACY"
                         class="transition-colors hover:text-slate-700"
                     >
                         Privacy
                     </NuxtLink>
 
                     <NuxtLink
-                        to="/help"
+                        :to="NAVIGATION_PATHS.COOKIES"
                         class="transition-colors hover:text-slate-700"
                     >
+                        Cookies
+                    </NuxtLink>
+
+                    <NuxtLink
+                        :to="NAVIGATION_PATHS.HELP"
+                        class="inline-flex items-center gap-1.5 transition-colors hover:text-slate-700"
+                    >
+                        <HelpCircle class="h-3.5 w-3.5" stroke-width="1.8" />
                         Help
                     </NuxtLink>
                 </div>

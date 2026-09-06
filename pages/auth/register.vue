@@ -12,7 +12,7 @@ import {
     User,
 } from "lucide-vue-next";
 
-const client = useSupabaseClient();
+const { register } = useAuth();
 
 const firstName = ref("");
 const lastName = ref("");
@@ -57,7 +57,7 @@ async function handleRegister() {
 
     loading.value = true;
 
-    const { error: authError } = await client.auth.signUp({
+    const { error: authError } = await register({
         email: email.value.trim(),
         password: password.value,
         options: {
@@ -87,11 +87,6 @@ async function handleRegister() {
         >
             <div class="w-full max-w-md">
                 <div class="mb-8 text-center">
-                    <div
-                        class="mx-auto flex h-12 w-12 items-center justify-center border border-slate-200 bg-white text-primary shadow-sm"
-                    >
-                        <CalendarDays class="h-6 w-6" stroke-width="1.8" />
-                    </div>
                     <h1
                         class="mt-6 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl"
                     >

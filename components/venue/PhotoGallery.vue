@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ChevronLeft, ChevronRight, Images } from "lucide-vue-next";
 
-import type { VenueImage } from "~/types/venue";
+import type { Media } from "~/types/venue";
 
 const props = defineProps<{
-    images: VenueImage[];
+    images: Media[];
 }>();
 
 const emit = defineEmits<{

@@ -95,7 +95,7 @@ function handleShare() {
                 </span>
             </nav>
 
-            <PhotoGallery :images="venue.images" />
+            <PhotoGallery :images="venue.media.filter(m => m.entityType === 'VENUE')" />
 
             <section class="border-b border-slate-200 py-8 lg:py-10">
                 <div

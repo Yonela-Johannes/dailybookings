@@ -4,7 +4,6 @@ import { CalendarCheck, Clock, Shield, ArrowRight } from "lucide-vue-next";
 
 <template>
     <Hero />
-    <Featured />
     <Popular />
     <HowItWorks />
     <Discovery />

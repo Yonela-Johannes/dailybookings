@@ -13,33 +13,17 @@ const { data: venue, pending } = await useVenue(route.params.slug as string)
 const cart = useBookingCart()
 const dateTime = useBookingDateTime()
 
-const steps = ['Services', 'Time', 'Confirm']
+const serviceIds = computed(() => cart.lines.value.map(l => l.service.id))
+const { data: slots, pending: slotsPending, refresh } = await useAvailability(route.params.slug as string).getAvailability(
+  dateTime.date,
+  serviceIds
+)
 
-// Default date
-if (!dateTime.date.value) {
-  dateTime.selectDate(new Date().toISOString().slice(0, 10))
-}
-
-const slots = computed(() => {
-  if (!dateTime.date.value) return []
-
-  const isToday =
-    dateTime.date.value === new Date().toISOString().slice(0, 10)
-
-  const all = [
-    '9:50 AM',
-    '10:00 AM',
-    '1:20 PM',
-    '1:30 PM',
-    '1:40 PM',
-    '1:50 PM',
-    '2:00 PM',
-    '4:00 PM',
-    '4:10 PM',
-  ]
-
-  return isToday ? all : all.slice(1)
+watch([() => dateTime.date.value, () => serviceIds.value], () => {
+  refresh()
 })
+
+const steps = ['Services', 'Time', 'Confirm']
 
 function goBack() {
   navigateTo(`/venues/${route.params.slug}/booking`)

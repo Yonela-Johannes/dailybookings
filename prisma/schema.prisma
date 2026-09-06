@@ -1,0 +1,552 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  CUSTOMER
+  BUSINESS_OWNER
+  PLATFORM_ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+enum MediaEntityType {
+  VENUE
+  EMPLOYEE
+  PORTFOLIO
+  BLOG
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+}
+
+enum VenueStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+}
+
+model User {
+  id       String   @id @default(uuid())
+  email    String   @unique
+  fullName String?
+  role     UserRole @default(CUSTOMER)
+
+  profile       Profile?
+  businesses    Business[]
+  bookings      Booking[]
+  reviews       Review[]
+  favorites     Favorite[]
+  notifications Notification[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Profile {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  avatarUrl String?
+  bio       String?
+  phone     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Business {
+  id      String @id @default(uuid())
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id])
+
+  name     String
+  taxId    String?
+  verified Boolean @default(false)
+
+  venues  Venue[]
+  payouts Payout[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([ownerId])
+}
+
+model Venue {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+
+  slug        String  @unique
+  name        String
+  tagline     String?
+  description String?
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  status      VenueStatus @default(DRAFT)
+  rating      Float       @default(0)
+  reviewCount Int         @default(0)
+
+  address       VenueAddress?
+  contact       VenueContact?
+  bookingConfig BookingConfig?
+
+  serviceCategories ServiceCategory[]
+  employees         Employee[]
+  reviews           Review[]
+  media             Media[]
+  portfolios        Portfolio[]
+  schedules         VenueSchedule[]
+  bookings          Booking[]
+  favorites         Favorite[]
+  coupons           Coupon[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([businessId])
+  @@index([categoryId])
+  @@index([status])
+}
+
+model VenueAddress {
+  id      String @id @default(uuid())
+  venueId String @unique
+  venue   Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  street     String
+  suburb     String
+  city       String
+  region     String
+  postalCode String
+  country    String @default("South Africa")
+
+  lat Float?
+  lng Float?
+}
+
+model VenueContact {
+  id      String @id @default(uuid())
+  venueId String @unique
+  venue   Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  phone     String
+  whatsapp  String?
+  email     String
+  website   String?
+  instagram String?
+  facebook  String?
+}
+
+model BookingConfig {
+  id      String @id @default(uuid())
+  venueId String @unique
+  venue   Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  instantConfirmation   Boolean @default(true)
+  acceptsOnlinePayments Boolean @default(false)
+  requiresDeposit       Boolean @default(false)
+  depositPercentage     Int     @default(0)
+  cancellationPolicy    String?
+  minimumNoticeMinutes  Int     @default(60)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id   String  @id @default(uuid())
+  name String  @unique
+  slug String  @unique
+  icon String?
+
+  venues Venue[]
+}
+
+model ServiceCategory {
+  id      String @id @default(uuid())
+  venueId String
+  venue   Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  name     String
+  services Service[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([venueId, name])
+  @@index([venueId])
+}
+
+model Service {
+  id                String          @id @default(uuid())
+  serviceCategoryId String
+  category          ServiceCategory @relation(fields: [serviceCategoryId], references: [id], onDelete: Cascade)
+
+  name            String
+  description     String?
+  durationMinutes Int
+  bufferMinutes   Int     @default(0)
+  price           Decimal @db.Decimal(10, 2)
+  priceIsFrom     Boolean @default(false)
+  popular         Boolean @default(false)
+
+  employees       Employee[]       @relation("EmployeeServices")
+  bookingServices BookingService[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([serviceCategoryId])
+}
+
+model Employee {
+  id      String @id @default(uuid())
+  venueId String
+  venue   Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  name        String
+  title       String?
+  bio         String?
+  imageUrl    String?
+  rating      Float   @default(0)
+  reviewCount Int     @default(0)
+
+  services        Service[]              @relation("EmployeeServices")
+  bookingServices BookingService[]
+  reviews         Review[]
+  schedules       EmployeeSchedule[]
+  availabilities  EmployeeAvailability[]
+  timeOff         TimeOff[]
+  media           Media[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([venueId])
+}
+
+model VenueSchedule {
+  id      String @id @default(uuid())
+  venueId String
+  venue   Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  day    Int
+  opens  String?
+  closes String?
+  closed Boolean @default(false)
+
+  @@unique([venueId, day])
+}
+
+model EmployeeSchedule {
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  day       Int
+  startTime String?
+  endTime   String?
+  isWorking Boolean @default(true)
+
+  @@unique([employeeId, day])
+}
+
+model EmployeeAvailability {
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  date        DateTime @db.Date
+  startTime   String?
+  endTime     String?
+  isAvailable Boolean  @default(true)
+
+  @@index([employeeId, date])
+}
+
+model TimeOff {
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  startDate DateTime
+  endDate   DateTime
+  reason    String?
+
+  @@index([employeeId, startDate, endDate])
+}
+
+model Booking {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  venueId String
+  venue   Venue  @relation(fields: [venueId], references: [id])
+
+  date          DateTime @db.Date
+  startTime     String
+  endTime       String
+  durationTotal Int
+  priceTotal    Decimal  @db.Decimal(10, 2)
+
+  status BookingStatus @default(PENDING)
+  notes  String?
+
+  services BookingService[]
+  payment  Payment?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([userId])
+  @@index([venueId])
+  @@index([venueId, date])
+  @@index([status])
+}
+
+model BookingService {
+  id String @id @default(uuid())
+
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id])
+
+  // The professional performing this specific service.
+  employeeId String?
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+
+  // Snapshot values preserve the booking history even if
+  // the service price/duration changes later.
+  price           Decimal @db.Decimal(10, 2)
+  durationMinutes Int
+
+  createdAt DateTime @default(now())
+
+  @@index([bookingId])
+  @@index([serviceId])
+  @@index([employeeId])
+}
+
+model Review {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  venueId String
+  venue   Venue  @relation(fields: [venueId], references: [id])
+
+  employeeId String?
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+
+  rating       Int
+  body         String?
+  serviceName  String?
+  employeeName String?
+  verified     Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([venueId])
+  @@index([employeeId])
+  @@index([userId])
+}
+
+model Media {
+  id String @id @default(uuid())
+
+  venueId String
+  venue   Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  employeeId String?
+  employee   Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+
+  portfolioId String?
+  portfolio   Portfolio? @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  blogId String?
+  blog   Blog?   @relation(fields: [blogId], references: [id], onDelete: Cascade)
+
+  url        String
+  alt        String?
+  type       MediaType       @default(IMAGE)
+  featured   Boolean         @default(false)
+  entityType MediaEntityType
+  category   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([venueId])
+  @@index([employeeId])
+  @@index([portfolioId])
+  @@index([blogId])
+}
+
+model Portfolio {
+  id      String @id @default(uuid())
+  venueId String
+  venue   Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  title       String?
+  description String?
+
+  media Media[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([venueId])
+}
+
+model Favorite {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  venueId String
+  venue   Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, venueId])
+  @@index([venueId])
+}
+
+model Notification {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title   String
+  message String
+  read    Boolean @default(false)
+  link    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+}
+
+model BlogCategory {
+  id   String @id @default(uuid())
+  name String @unique
+  slug String @unique
+
+  blogs Blog[]
+}
+
+model Blog {
+  id String @id @default(uuid())
+
+  categoryId String
+  category   BlogCategory @relation(fields: [categoryId], references: [id])
+
+  title         String
+  slug          String  @unique
+  content       String  @db.Text
+  excerpt       String?
+  featuredImage String?
+  published     Boolean @default(false)
+
+  media Media[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+  @@index([published])
+}
+
+model Payment {
+  id String @id @default(uuid())
+
+  bookingId String  @unique
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  amount        Decimal       @db.Decimal(10, 2)
+  currency      String        @default("ZAR")
+  status        PaymentStatus @default(PENDING)
+  provider      String?
+  transactionId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Payout {
+  id String @id @default(uuid())
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  amount Decimal      @db.Decimal(10, 2)
+  status PayoutStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([status])
+}
+
+model Coupon {
+  id String @id @default(uuid())
+
+  venueId String
+  venue   Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  code         String
+  discount     Decimal   @db.Decimal(10, 2)
+  isPercentage Boolean   @default(true)
+  expiresAt    DateTime?
+  active       Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@unique([venueId, code])
+  @@index([venueId, active])
+}

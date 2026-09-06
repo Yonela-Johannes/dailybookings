@@ -1,57 +1,117 @@
-import { serverSupabaseClient } from '#supabase/server'
-import { Database } from '~/types/supabase'
+import { z } from 'zod'
+import { serverSupabaseUser } from '#supabase/server'
+import { PrismaClient } from '@prisma/client'
+import { calculateAvailableSlots } from '~/server/utils/availability'
+import { addMinutes, parse, format } from 'date-fns'
+
+const bookingSchema = z.object({
+  venueId: z.string(),
+  serviceIds: z.array(z.string()),
+  employeeId: z.string().optional(),
+  date: z.string(), // ISO date string
+  startTime: z.string(), // HH:mm
+  notes: z.string().optional(),
+})
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event)
-  const { serviceId, customerName, customerEmail, date, startTime, endTime, notes, slug } = body
+  const prisma = new PrismaClient()
+  const user = await serverSupabaseUser(event)
+  if (!user) {
+    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  }
 
-  if (!serviceId || !customerName || !customerEmail || !date || !startTime || !endTime || !slug) {
+  const body = await readBody(event)
+  const validation = bookingSchema.safeParse(body)
+
+  if (!validation.success) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Missing required fields: serviceId, customerName, customerEmail, date, startTime, endTime, slug',
+      statusMessage: 'Invalid input: ' + validation.error.message,
     })
   }
 
-  const client = await serverSupabaseClient<Database>(event)
+  const { venueId, serviceIds, employeeId, date, startTime, notes } = validation.data
+  const bookingDate = new Date(date)
 
-  // 1. Fetch business (profile) by slug to get the user_id
-  const { data: profile, error: profileError } = await client
-    .from('profiles')
-    .select('id')
-    .eq('slug', slug)
-    .single()
+  // 1. Fetch Services to calculate duration and price
+  const services = await prisma.service.findMany({
+    where: { id: { in: serviceIds } },
+  })
 
-  if (profileError || !profile) {
+  if (services.length === 0) {
+    throw createError({ statusCode: 400, statusMessage: 'No valid services selected' })
+  }
+
+  const totalDuration = services.reduce((acc, s) => acc + s.durationMinutes, 0)
+  const totalPrice = services.reduce((acc, s) => acc + Number(s.price), 0)
+
+  // 2. Calculate end time
+  const start = parse(startTime, 'HH:mm', bookingDate)
+  const end = addMinutes(start, totalDuration)
+  const endTime = format(end, 'HH:mm')
+
+  // 3. Re-validate availability
+  const availableSlots = await calculateAvailableSlots(
+    venueId,
+    serviceIds,
+    employeeId || null,
+    bookingDate
+  )
+
+  const isAvailable = availableSlots.some(
+    (slot) => slot.startTime === startTime && slot.endTime === endTime
+  )
+
+  if (!isAvailable) {
     throw createError({
-      statusCode: 404,
-      statusMessage: 'Business not found',
+      statusCode: 409,
+      statusMessage: 'Selected slot is no longer available',
     })
   }
 
-  // 2. Create new booking
-  // We set status to 'confirmed' as requested
-  const { data: booking, error: bookingError } = await client
-    .from('bookings')
-    .insert({
-      user_id: profile.id,
-      service_id: serviceId,
-      customer_name: customerName,
-      customer_email: customerEmail,
-      date,
-      start_time: startTime,
-      end_time: endTime,
-      notes: notes || null,
-      status: 'confirmed'
-    })
-    .select()
-    .single()
+  // 4. Create Booking and related records in a transaction
+  try {
+    const booking = await prisma.$transaction(async (tx) => {
+      const newBooking = await tx.booking.create({
+        data: {
+          userId: user.id,
+          venueId,
+          employeeId: employeeId || null,
+          date: bookingDate,
+          startTime,
+          endTime,
+          durationTotal: totalDuration,
+          priceTotal: totalPrice,
+          status: 'PENDING',
+          notes,
+          services: {
+            create: services.map((s) => ({
+              serviceId: s.id,
+              price: s.price,
+            })),
+          },
+          payment: {
+            create: {
+              amount: totalPrice,
+              status: 'PENDING',
+            },
+          },
+        },
+        include: {
+          services: true,
+          payment: true,
+          venue: true,
+        },
+      })
 
-  if (bookingError) {
+      return newBooking
+    })
+
+    return booking
+  } catch (error: any) {
     throw createError({
       statusCode: 500,
-      statusMessage: 'Error creating booking: ' + bookingError.message,
+      statusMessage: 'Failed to create booking: ' + error.message,
     })
   }
-
-  return booking
 })

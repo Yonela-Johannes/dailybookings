@@ -11,7 +11,7 @@ import {
     ShieldCheck,
 } from "lucide-vue-next";
 
-const client = useSupabaseClient();
+const { login } = useAuth();
 
 const email = ref("");
 const password = ref("");
@@ -25,7 +25,7 @@ async function handleLogin() {
     loading.value = true;
     error.value = "";
 
-    const { error: authError } = await client.auth.signInWithPassword({
+    const { error: authError } = await login({
         email: email.value.trim(),
         password: password.value,
     });
@@ -60,11 +60,6 @@ function getAuthError(message: string) {
             <div class="w-full max-w-md">
                 <!-- Header -->
                 <div class="mb-8 text-center">
-                    <div
-                        class="mx-auto flex h-12 w-12 items-center justify-center border border-slate-200 bg-white text-primary shadow-sm"
-                    >
-                        <CalendarDays class="h-6 w-6" stroke-width="1.8" />
-                    </div>
                     <h1
                         class="mt-6 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl"
                     >
@@ -135,7 +130,7 @@ function getAuthError(message: string) {
                                 </label>
 
                                 <NuxtLink
-                                    to="/forgot-password"
+                                    to="/auth/forgot-password"
                                     class="text-xs font-medium text-slate-500 transition-colors hover:text-primary"
                                 >
                                     Forgot password?
@@ -236,7 +231,7 @@ function getAuthError(message: string) {
                 <p class="mt-6 text-center text-sm text-slate-500">
                     Don't have an account?
                     <NuxtLink
-                        to="/register"
+                        to="/auth/register"
                         class="ml-1 font-semibold text-slate-950 transition-colors hover:text-primary"
                     >
                         Create an account

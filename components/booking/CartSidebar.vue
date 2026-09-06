@@ -43,7 +43,7 @@ function formatDuration(minutes: number) {
         <div class="p-5 sm:p-6">
             <div class="flex items-center gap-3">
                 <img
-                    :src="venue.images[0]?.url"
+                    :src="venue.media.find(m => m.featured)?.url || venue.media[0]?.url"
                     :alt="venue.name"
                     class="h-14 w-14 shrink-0 rounded-xl object-cover"
                 />
