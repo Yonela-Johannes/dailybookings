@@ -1,99 +1,41 @@
 <script setup lang="ts">
 import {
     ArrowUpRight,
-    BriefcaseBusiness,
-    Camera,
-    Car,
-    Dumbbell,
-    GraduationCap,
-    HandHeart,
-    House,
-    Scissors,
     Sparkles,
+    Scissors,
+    HeartPulse,
+    Dumbbell,
+    Camera,
+    GraduationCap,
+    House,
+    BriefcaseBusiness,
 } from "lucide-vue-next";
+import { NAVIGATION_PATHS } from "~/utils/constants";
 
-interface Category {
-    name: string;
-    description: string;
-    image: string;
-    to: string;
-    icon: unknown;
-}
+const { data: discovery, pending } = await useDiscovery();
 
-const categories: Category[] = [
-    {
-        name: "Beauty",
-        description: "Hair, nails, skincare & more",
-        image: "/images/categories/beauty.jpg",
-        to: "/categories/beauty",
-        icon: Sparkles,
-    },
-    {
-        name: "Hair",
-        description: "Salons, barbers & stylists",
-        image: "/images/categories/hair.jpg",
-        to: "/categories/hair",
-        icon: Scissors,
-    },
-    {
-        name: "Wellness",
-        description: "Massage, spa & wellbeing",
-        image: "/images/categories/wellness.jpg",
-        to: "/categories/wellness",
-        icon: HandHeart,
-    },
-    {
-        name: "Fitness",
-        description: "Trainers, gyms & classes",
-        image: "/images/categories/fitness.jpg",
-        to: "/categories/fitness",
-        icon: Dumbbell,
-    },
-    {
-        name: "Photography",
-        description: "Photographers & studios",
-        image: "/images/categories/photography.jpg",
-        to: "/categories/photography",
-        icon: Camera,
-    },
-    {
-        name: "Tutors",
-        description: "Learn from local experts",
-        image: "/images/categories/tutors.jpg",
-        to: "/categories/tutors",
-        icon: GraduationCap,
-    },
-    {
-        name: "Home Services",
-        description: "Trusted help for your home",
-        image: "/images/categories/home-services.jpg",
-        to: "/categories/home-services",
-        icon: House,
-    },
-    {
-        name: "Business",
-        description: "Professional services",
-        image: "/images/categories/business.jpg",
-        to: "/categories/business",
-        icon: BriefcaseBusiness,
-    },
-    {
-        name: "Transport",
-        description: "Drivers, cars & transfers",
-        image: "/images/categories/transport.jpg",
-        to: "/categories/transport",
-        icon: Car,
-    },
-];
+const ICON_MAP: Record<string, any> = {
+    sparkles: Sparkles,
+    scissors: Scissors,
+    "heart-pulse": HeartPulse,
+    dumbbell: Dumbbell,
+    camera: Camera,
+    "graduation-cap": GraduationCap,
+    house: House,
+    "briefcase-business": BriefcaseBusiness,
+};
 
 const fallbackImage =
     "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1200&q=85";
+
+const popularCategories = computed(
+    () => discovery.value?.popularCategories || [],
+);
 </script>
 
 <template>
     <section class="border-t border-slate-200 bg-white">
         <div class="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
-            <!-- Header -->
             <div
                 class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between"
             >
@@ -113,73 +55,76 @@ const fallbackImage =
                     <p
                         class="mt-3 max-w-xl text-sm leading-6 text-slate-500 sm:text-base"
                     >
-                        Find trusted professionals for the things you do, need
-                        and love.
+                        Find trusted local professionals for the things you
+                        need, do and love.
                     </p>
                 </div>
 
                 <NuxtLink
-                    to="/categories"
-                    class="group inline-flex h-10 w-fit shrink-0 items-center gap-2 border border-slate-200 px-4 text-sm font-semibold text-slate-900 transition-colors hover:border-slate-900 hover:bg-slate-950 hover:text-white"
+                    :to="NAVIGATION_PATHS.DISCOVER"
+                    class="group inline-flex h-10 w-fit shrink-0 items-center gap-2 border border-slate-200 px-4 text-sm font-semibold text-slate-900 transition-colors hover:border-slate-950 hover:bg-slate-950 hover:text-white"
                 >
                     View all categories
 
                     <ArrowUpRight
                         class="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                        stroke-width="1.8"
                     />
                 </NuxtLink>
             </div>
 
-            <!-- Categories -->
             <div
-                class="mt-10 grid grid-cols-2 gap-px overflow-hidden bg-slate-200 border border-slate-200 sm:grid-cols-3 lg:grid-cols-5"
+                v-if="pending"
+                class="mt-10 grid grid-cols-2 gap-px overflow-hidden border border-slate-200 bg-slate-200 sm:grid-cols-3 lg:grid-cols-4"
             >
+                <div
+                    v-for="i in 8"
+                    :key="i"
+                    class="aspect-[4/5] animate-pulse bg-slate-100"
+                />
+            </div>
+
+            <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <NuxtLink
-                    v-for="category in categories"
-                    :key="category.name"
-                    :to="category.to"
-                    class="group relative aspect-[4/5] overflow-hidden bg-slate-100"
+                    v-for="category in popularCategories"
+                    :key="category.slug"
+                    :to="NAVIGATION_PATHS.CATEGORY(category.slug)"
+                    class="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary hover:shadow-xl"
                 >
-                    <!-- Image -->
+                    <div
+                        class="absolute right-0 top-0 h-32 w-32 translate-x-10 -translate-y-10 rounded-full bg-primary/5 transition-transform duration-500 group-hover:scale-125"
+                    />
+
                     <img
-                        :src="category.image || fallbackImage"
+                        :src="category.imageUrl || fallbackImage"
                         :alt="category.name"
                         loading="lazy"
                         class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
                     />
-
-                    <!-- Overlay -->
-                    <div
-                        class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/5 transition-colors duration-300 group-hover:from-black/85"
-                    />
-
-                    <!-- Icon -->
-                    <div
-                        class="absolute left-4 top-4 flex h-9 w-9 items-center justify-center border border-white/25 bg-black/20 text-white backdrop-blur-sm"
-                    >
-                        <component :is="category.icon" class="h-4 w-4" />
-                    </div>
-
-                    <!-- Arrow -->
-                    <div
-                        class="absolute right-4 top-4 flex h-9 w-9 translate-y-1 items-center justify-center border border-white/25 bg-white/0 text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:bg-white group-hover:text-slate-950 group-hover:opacity-100"
-                    >
-                        <ArrowUpRight class="h-4 w-4" />
-                    </div>
-
-                    <!-- Content -->
-                    <div class="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+                    <div class="relative mt-6">
                         <h3
-                            class="text-lg font-semibold tracking-tight text-white"
+                            class="text-xl font-semibold tracking-tight text-slate-950"
                         >
                             {{ category.name }}
                         </h3>
 
                         <p
-                            class="mt-1 text-xs leading-5 text-white/70 sm:text-sm"
+                            v-if="category.description"
+                            class="mt-2 line-clamp-2 text-sm leading-6 text-slate-500"
                         >
                             {{ category.description }}
                         </p>
+
+                        <div class="mt-5 flex items-center justify-between">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                {{ category._count?.venues || 0 }} Venues
+                            </div>
+                            <div
+                                class="flex h-9 w-9 items-center justify-center rounded-full text-slate-200 border border-slate-200 transition-all duration-300 group-hover:border-primary group-hover:bg-primary group-hover:text-white"
+                            >
+                                <ArrowUpRight class="h-4 w-4" />
+                            </div>
+                        </div>
                     </div>
                 </NuxtLink>
             </div>

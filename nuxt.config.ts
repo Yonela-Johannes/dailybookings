@@ -1,12 +1,15 @@
-// https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  compatibilityDate: '2024-04-03',
   devtools: { enabled: true },
-  modules: ["@nuxtjs/supabase", "@nuxtjs/tailwindcss"],
+  modules: ["@nuxtjs/supabase", "@nuxtjs/tailwindcss", "@nuxtjs/google-fonts"],
   supabase: {
     redirect: false
   },
   tailwindcss: {
     viewer: false
+  },
+  googleFonts: {
+    families: { Caveat: [600, 700] },
   },
   css: ["~/assets/css/main.css"]
 })

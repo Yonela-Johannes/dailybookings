@@ -8,9 +8,16 @@ export interface VenueAddress {
   lng: number
 }
 
-export interface VenueImage {
+export interface Media {
+  id: string
+  venueId: string
   url: string
-  alt: string
+  alt?: string
+  type: 'image' | 'video'
+  featured: boolean
+  entityType: 'VENUE' | 'EMPLOYEE' | 'PORTFOLIO' | 'BLOG'
+  category?: string
+  createdAt: string
 }
 
 export interface VenueService {
@@ -33,7 +40,7 @@ export interface VenueEmployee {
   name: string
   title?: string
   rating?: number
-  avatarUrl?: string
+  imageUrl?: string
 }
 
 export interface VenueReview {
@@ -44,6 +51,7 @@ export interface VenueReview {
   body: string
   serviceName?: string
   employeeName?: string
+  verified?: boolean
   postedAt: string
 }
 
@@ -54,23 +62,37 @@ export interface OpeningHours {
   closed?: boolean
 }
 
+export interface Category {
+  id: string
+  name: string
+  slug: string
+  description?: string | null
+  imageUrl?: string | null
+  icon?: string | null
+  status?: 'ACTIVE' | 'INACTIVE'
+  _count?: {
+    venues: number
+  }
+}
+
 export interface Venue {
   id: string
   slug: string
   name: string
   tagline?: string
   description: string
+  verified?: boolean
   rating: number
   reviewCount: number
   reviewSummary?: string
+  category: Category
   tags: string[]
   address: VenueAddress
   phone?: string
-  images: VenueImage[]
+  media: Media[]
   serviceCategories: VenueServiceCategory[]
   team: VenueEmployee[]
   reviews: VenueReview[]
-  portfolio: VenueImage[]
   hours: OpeningHours[]
   amenities: string[]
 }

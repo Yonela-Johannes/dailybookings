@@ -29,7 +29,7 @@ const emit = defineEmits<{
         <!-- IMAGE -->
         <div class="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
             <img
-                :src="props.provider.image"
+                :src="props.provider.image || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1600'"
                 :alt="props.provider.alt"
                 loading="lazy"
                 class="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.025]"

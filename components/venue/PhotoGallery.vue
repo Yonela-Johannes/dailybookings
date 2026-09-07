@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ChevronLeft, ChevronRight, Images } from "lucide-vue-next";
 
-import type { VenueImage } from "~/types/venue";
+import type { Media } from "~/types/venue";
 
 const props = defineProps<{
-    images: VenueImage[];
+    images: Media[];
 }>();
 
 const emit = defineEmits<{
@@ -35,7 +35,7 @@ function openGallery(index = 0) {
                 @click="openGallery(0)"
             >
                 <img
-                    :src="visibleImages[0]?.url"
+                    :src="visibleImages[0]?.url || 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200'"
                     :alt="visibleImages[0]?.alt || ''"
                     class="h-full w-full object-cover transition-transform duration-700 group-hover/main:scale-[1.02]"
                 />

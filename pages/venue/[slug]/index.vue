@@ -7,6 +7,7 @@ import {
     MapPin,
     Share2,
 } from "lucide-vue-next";
+import { formatDistanceToNow } from "date-fns";
 
 import PhotoGallery from "~/components/venue/PhotoGallery.vue";
 import ServicesTabs from "~/components/venue/ServicesTabs.vue";
@@ -18,7 +19,21 @@ import StarRating from "~/components/venue/StarRating.vue";
 
 const route = useRoute();
 
-const { data: venue, pending } = await useVenue(route.params.slug as string);
+const { data: venueData, pending } = await useVenue(route.params.slug as string);
+
+const venue = computed(() => {
+    if (!venueData.value) return null;
+
+    return {
+        ...venueData.value,
+        reviews: venueData.value.reviews.map((review) => ({
+            ...review,
+            postedAt: formatDistanceToNow(new Date(review.postedAt), {
+                addSuffix: true,
+            }),
+        })),
+    };
+});
 
 useHead(() => ({
     title: venue.value
@@ -95,7 +110,7 @@ function handleShare() {
                 </span>
             </nav>
 
-            <PhotoGallery :images="venue.images" />
+            <PhotoGallery :images="venue.media.filter(m => m.entityType === 'VENUE')" />
 
             <section class="border-b border-slate-200 py-8 lg:py-10">
                 <div
@@ -108,7 +123,7 @@ function handleShare() {
                             v-if="venue.category"
                             class="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-primary"
                         >
-                            {{ venue.category }}
+                            {{ venue.category.name }}
                         </div>
 
                         <!-- Name -->
