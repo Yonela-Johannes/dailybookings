@@ -209,5 +209,4 @@ const categories = ["Bookings", "Payments", "Account", "For Businesses"];
             </div>
         </section>
     </main>
-    <Footer />
 </template>

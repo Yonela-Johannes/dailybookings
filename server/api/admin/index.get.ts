@@ -4,7 +4,7 @@ import { isPlatformAdmin } from '~/server/utils/auth'
 export default defineEventHandler(async (event) => {
   await isPlatformAdmin(event)
 
-  const [userCount, venueCount, bookingCount, revenueResult] = await Promise.all([
+  const [userCount, venueCount, bookingCount, revenueResult, recentBookings, recentUsers] = await Promise.all([
     prisma.user.count(),
     prisma.venue.count(),
     prisma.booking.count(),
@@ -17,6 +17,25 @@ export default defineEventHandler(async (event) => {
       _sum: {
         priceTotal: true
       }
+    }),
+    prisma.booking.findMany({
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { fullName: true, email: true } },
+        venue: { select: { name: true, slug: true } }
+      }
+    }),
+    prisma.user.findMany({
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        role: true,
+        createdAt: true
+      }
     })
   ])
 
@@ -24,6 +43,8 @@ export default defineEventHandler(async (event) => {
     totalUsers: userCount,
     totalVenues: venueCount,
     totalBookings: bookingCount,
-    totalRevenue: revenueResult._sum.priceTotal || 0
+    totalRevenue: Number(revenueResult._sum.priceTotal || 0),
+    recentBookings,
+    recentUsers
   }
 })

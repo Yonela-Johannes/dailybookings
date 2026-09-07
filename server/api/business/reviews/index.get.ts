@@ -5,7 +5,8 @@ import { z } from 'zod'
 const querySchema = z.object({
   page: z.string().optional().transform(v => parseInt(v || '1')),
   limit: z.string().optional().transform(v => parseInt(v || '20')),
-  venueId: z.string().uuid().optional()
+  venueId: z.string().uuid().optional(),
+  rating: z.string().optional().transform(v => v ? parseInt(v) : undefined)
 })
 
 export default defineEventHandler(async (event) => {
@@ -13,55 +14,52 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
 
   try {
-    const { page, limit, venueId } = querySchema.parse(query)
+    const { page, limit, venueId, rating } = querySchema.parse(query)
     const skip = (page - 1) * limit
 
-    const where = {...(venueId && { venueId }),
-      ...(user.role !== 'PLATFORM_ADMIN' && {
-        venue: {
+    const where: any = {
+      venue: user.role === 'PLATFORM_ADMIN' ?
+        (venueId ? { id: venueId } : {}) :
+        {
           business: {
             ownerId: user.id
           }
         }
-      })
     }
 
-    const [total, employees] = await Promise.all([
-      prisma.employee.count({ where }),
-      prisma.employee.findMany({
+    if (venueId) where.venueId = venueId
+    if (rating) where.rating = rating
+
+    const [total, reviews] = await Promise.all([
+      prisma.review.count({ where }),
+      prisma.review.findMany({
         where,
         include: {
-          venue: {
+          user: {
             select: {
-              id: true,
-              name: true
+              fullName: true,
+              email: true,
+              profile: {
+                select: {
+                  avatarUrl: true
+                }
+              }
             }
           },
-          services: true,
-          schedules: true,
-          _count: {
+          venue: {
             select: {
-              reviews: true
+              name: true
             }
           }
         },
-        orderBy: { name: 'asc' },
+        orderBy: { createdAt: 'desc' },
         skip,
         take: limit
       })
     ])
 
-    // Clean decimals
-    const employeesClean = employees.map(e => ({
-      ...e,
-      services: e.services.map(s => ({
-        ...s,
-        price: Number(s.price)
-      }))
-    }))
-
     return {
-      data: employeesClean,
+      data: reviews,
       meta: {
         total,
         page,

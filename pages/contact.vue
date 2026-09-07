@@ -242,5 +242,4 @@ async function handleSubmit() {
             </div>
         </section>
     </main>
-    <Footer />
 </template>

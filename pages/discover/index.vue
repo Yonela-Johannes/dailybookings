@@ -227,15 +227,15 @@ const handleSearch = () => {
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div v-for="service in POPULAR_SERVICES.slice(0, 4)" :key="service" class="bg-white p-8 border border-slate-200 group hover:border-primary transition-colors flex flex-col">
+            <div v-for="service in discoveryData?.trendingServices?.slice(0, 4)" :key="service.id" class="bg-white p-8 border border-slate-200 group hover:border-primary transition-colors flex flex-col">
               <div class="w-12 h-12 border border-slate-100 bg-slate-50 text-slate-950 flex items-center justify-center mb-8 group-hover:bg-primary group-hover:text-white transition-all">
                 <ArrowRight class="w-5 h-5" stroke-width="1.5" />
               </div>
-              <h3 class="text-lg font-bold text-slate-950 mb-3">{{ service }}</h3>
-              <p class="text-sm text-slate-500 mb-8 leading-relaxed">Discover top-rated providers offering {{ service.toLowerCase() }} in your area.</p>
+              <h3 class="text-lg font-bold text-slate-950 mb-3">{{ service.name }}</h3>
+              <p class="text-sm text-slate-500 mb-8 leading-relaxed">Discover top-rated providers offering {{ service.name.toLowerCase() }} in your area.</p>
 
               <NuxtLink
-                :to="`${NAVIGATION_PATHS.SEARCH}?search=${encodeURIComponent(service)}`"
+                :to="`${NAVIGATION_PATHS.SEARCH}?search=${encodeURIComponent(service.name)}`"
                 class="mt-auto text-[10px] font-bold text-slate-950 uppercase tracking-[0.2em] flex items-center gap-2 group-hover:text-primary transition-colors"
               >
                 Find Venues
@@ -247,5 +247,4 @@ const handleSearch = () => {
       </section>
     </div>
   </main>
-  <Footer />
 </template>

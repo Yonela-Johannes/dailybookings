@@ -20,26 +20,42 @@ export default defineEventHandler(async (event) => {
     const { status, startDate, endDate, venueId, page, limit } = querySchema.parse(query)
     const skip = (page - 1) * limit
 
-    const where = {
+    const where: any = {
       venue: user.role === 'PLATFORM_ADMIN' ?
         (venueId ? { id: venueId } : {}) :
         {
-          id: venueId,
           business: {
             ownerId: user.id
           }
-        },
-      status: status,
-      date: {
+        }
+    }
+
+    if (venueId) where.id = venueId // Correction: venueId was being used incorrectly in the 'where' object for booking
+
+    // Corrected 'where' for Booking model
+    const bookingWhere: any = {
+      venue: user.role === 'PLATFORM_ADMIN' ?
+        (venueId ? { id: venueId } : {}) :
+        {
+          business: {
+            ownerId: user.id
+          }
+        }
+    }
+
+    if (venueId) bookingWhere.venueId = venueId
+    if (status) bookingWhere.status = status
+    if (startDate || endDate) {
+      bookingWhere.date = {
         gte: startDate ? new Date(startDate) : undefined,
         lte: endDate ? new Date(endDate) : undefined
       }
     }
 
     const [total, bookings] = await Promise.all([
-      prisma.booking.count({ where }),
+      prisma.booking.count({ where: bookingWhere }),
       prisma.booking.findMany({
-        where,
+        where: bookingWhere,
         include: {
           user: {
             select: {
@@ -75,7 +91,14 @@ export default defineEventHandler(async (event) => {
     ])
 
     return {
-      data: bookings,
+      data: bookings.map(b => ({
+        ...b,
+        priceTotal: Number(b.priceTotal),
+        services: b.services.map(s => ({
+          ...s,
+          price: Number(s.price)
+        }))
+      })),
       meta: {
         total,
         page,

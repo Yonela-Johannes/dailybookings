@@ -11,8 +11,24 @@ import {
     ShieldCheck,
 } from "lucide-vue-next";
 
-const { login } = useAuth();
+const { login, isAuthenticated, role, dbUser } = useAuth();
 const route = useRoute();
+
+function getHomeDashboardPath(userRole: string) {
+  switch (userRole) {
+    case 'PLATFORM_ADMIN': return '/admin'
+    case 'BUSINESS_OWNER': return '/business'
+    default: return '/dashboard'
+  }
+}
+
+// Redirect if already logged in
+watchEffect(() => {
+  if (isAuthenticated.value && dbUser.value) {
+    const redirect = route.query.redirect as string;
+    navigateTo(redirect || getHomeDashboardPath(dbUser.value.role));
+  }
+});
 
 const email = ref("");
 const password = ref("");
@@ -26,19 +42,24 @@ async function handleLogin() {
     loading.value = true;
     error.value = "";
 
-    const { error: authError } = await login({
-        email: email.value.trim(),
-        password: password.value,
-    });
+    try {
+        const { error: authError, data } = await login({
+            email: email.value.trim(),
+            password: password.value,
+        });
 
-    if (authError) {
-        error.value = getAuthError(authError.message);
+        if (authError) {
+            error.value = getAuthError(authError.message);
+            loading.value = false;
+            return;
+        }
+
+        // Wait for dbUser to be populated (login calls syncUser which sets dbUser)
+        // The watchEffect above will handle the navigation once dbUser is present.
+    } catch (err: any) {
+        error.value = "An unexpected error occurred. Please try again.";
         loading.value = false;
-        return;
     }
-
-    const redirect = route.query.redirect as string;
-    await navigateTo(redirect || "/dashboard");
 }
 
 function getAuthError(message: string) {

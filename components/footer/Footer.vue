@@ -8,6 +8,7 @@ import {
     Instagram,
     Linkedin,
     Search,
+    Shield,
     Smartphone,
     Users,
 } from "lucide-vue-next";
@@ -31,7 +32,7 @@ const footerSections = [
                 to: NAVIGATION_PATHS.DISCOVER,
             },
             {
-                label: "Explore Categories",
+                label: "Browse Categories",
                 to: NAVIGATION_PATHS.DISCOVER,
             },
             {
@@ -39,8 +40,8 @@ const footerSections = [
                 to: "/how-it-works",
             },
             {
-                label: "Popular Services",
-                to: NAVIGATION_PATHS.SEARCH,
+                label: "Book with Confidence",
+                to: "/trust-safety",
             },
             {
                 label: "Help & Support",
@@ -48,6 +49,7 @@ const footerSections = [
             },
         ],
     },
+
     {
         id: "business",
         title: "For Businesses",
@@ -58,10 +60,6 @@ const footerSections = [
                 to: "/for-business",
             },
             {
-                label: "How It Works",
-                to: "/business/how-it-works",
-            },
-            {
                 label: "Professional Features",
                 to: "/business/features",
             },
@@ -70,11 +68,16 @@ const footerSections = [
                 to: "/business/pricing",
             },
             {
-                label: "Get Started",
-                to: NAVIGATION_PATHS.REGISTER,
+                label: "Success Stories",
+                to: "/business/success-stories",
+            },
+            {
+                label: "Business Resources",
+                to: "/business/resources",
             },
         ],
     },
+
     {
         id: "dailybookings",
         title: "DailyBookings",
@@ -97,9 +100,21 @@ const footerSections = [
                 to: NAVIGATION_PATHS.CONTACT,
             },
             {
-                label: "Help Centre",
-                to: NAVIGATION_PATHS.HELP,
+                label: "Press & Media",
+                to: "/press",
             },
+        ],
+    },
+    {
+        id: "legal",
+        title: "Legal",
+        icon: Shield,
+        links: [
+            { label: "Privacy Policy", to: "/privacy" },
+            { label: "Terms of Service", to: "/terms" },
+            { label: "Trust & Safety", to: "/trust-safety" },
+            { label: "Cookie Policy", to: "/cookies" },
+            { label: "Community Guidelines", to: "/guidelines" },
         ],
     },
 ];
@@ -127,7 +142,7 @@ const socialLinks = [
     <footer class="border-t border-slate-200 bg-slate-50 text-slate-900">
         <div class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
             <div
-                class="grid gap-12 md:grid-cols-2 lg:grid-cols-[1.35fr_1fr_1fr_1fr]"
+                class="grid gap-12 md:grid-cols-2 lg:grid-cols-[1.35fr_1fr_1fr_1fr_1fr]"
             >
                 <!-- BRAND -->
                 <div>

@@ -57,6 +57,20 @@ const getStatusColor = (status: string) => {
     default: return 'bg-slate-50 text-slate-700 border-slate-100'
   }
 }
+
+const cancelBooking = async (id: string) => {
+  if (!confirm('Are you sure you want to cancel this booking?')) return
+
+  try {
+    await $fetch(`/api/bookings/${id}`, {
+      method: 'PATCH',
+      body: { status: 'CANCELLED' }
+    })
+    refresh()
+  } catch (error) {
+    console.error('Failed to cancel booking:', error)
+  }
+}
 </script>
 
 <template>
@@ -67,11 +81,10 @@ const getStatusColor = (status: string) => {
         <p class="text-slate-500 text-lg">Manage your appointments and business stats</p>
       </div>
       <NuxtLink
-        to="/b/demo"
-        target="_blank"
+        to="/"
         class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 font-bold rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
       >
-        View Public Page
+        Discover Businesses
       </NuxtLink>
     </header>
 
@@ -153,9 +166,16 @@ const getStatusColor = (status: string) => {
             </div>
 
             <div class="flex items-center gap-3 md:self-center">
-              <NuxtLink :to="`/venue/${booking.venue.slug}`" class="px-4 py-2 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition-colors text-xs">
+              <NuxtLink :to="`/venue/${booking.venue.slug}`" class="px-4 py-2 bg-slate-100 text-slate-900 font-bold rounded-lg hover:bg-slate-200 transition-colors text-xs">
                 View Business
               </NuxtLink>
+              <button
+                v-if="booking.status === 'PENDING' || booking.status === 'CONFIRMED'"
+                @click="cancelBooking(booking.id)"
+                class="px-4 py-2 bg-white border border-red-200 text-red-600 font-bold rounded-lg hover:bg-red-50 transition-colors text-xs"
+              >
+                Cancel
+              </button>
               <button class="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors">
                 <MoreVertical class="w-5 h-5" />
               </button>

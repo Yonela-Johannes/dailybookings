@@ -109,5 +109,4 @@ const features = [
              </div>
         </section>
     </main>
-    <Footer />
 </template>

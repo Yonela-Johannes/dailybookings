@@ -2,12 +2,14 @@ import { prisma } from '~/server/utils/prisma'
 import { isBusinessOwner } from '~/server/utils/auth'
 import { z } from 'zod'
 
+import { VenueStatus } from '@prisma/client'
+
 const updateVenueSchema = z.object({
   name: z.string().min(2).optional(),
   tagline: z.string().optional(),
   description: z.string().optional(),
   categoryId: z.string().uuid().optional(),
-  status: z.enum(['active', 'suspended', 'draft']).optional(),
+  status: z.nativeEnum(VenueStatus).optional(),
   address: z.object({
     street: z.string(),
     suburb: z.string(),

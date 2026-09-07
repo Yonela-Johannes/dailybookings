@@ -109,7 +109,7 @@ const updateRole = async (userId: string, role: string) => {
               <td class="px-6 py-4">
                 <div class="flex items-center gap-3">
                   <div class="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-teal-500 font-bold overflow-hidden">
-                    <img v-if="user.profile?.avatar" :src="user.profile.avatar" class="w-full h-full object-cover" />
+                    <img v-if="user.profile?.avatarUrl" :src="user.profile.avatarUrl" class="w-full h-full object-cover" />
                     <template v-else>{{ user.fullName?.charAt(0) || user.email.charAt(0) }}</template>
                   </div>
                   <div>

@@ -39,8 +39,17 @@ export default defineEventHandler(async (event) => {
       orderBy: { name: 'asc' }
     })
 
+    // Clean decimals for serialization
+    const categoriesClean = categories.map(cat => ({
+      ...cat,
+      services: cat.services.map(s => ({
+        ...s,
+        price: Number(s.price)
+      }))
+    }))
+
     return {
-      data: categories
+      data: categoriesClean
     }
   } catch (error: any) {
     throw createError({

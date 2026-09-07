@@ -21,18 +21,18 @@ import {
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import { NAVIGATION_PATHS } from "~/utils/constants";
 
-const user = useSupabaseUser();
+const { user, dbUser, logout } = useAuth();
 const client = useSupabaseClient();
 
 const { data: discovery } = await useDiscovery();
-const route = useRoute()
+const route = useRoute();
 
-const isScrolled = ref(false)
-const menuOpen = ref(false)
-const exploreOpen = ref(false)
-const activeCategory = ref<string | null>(null)
+const isScrolled = ref(false);
+const menuOpen = ref(false);
+const exploreOpen = ref(false);
+const activeCategory = ref<string | null>(null);
 
-const isHomePage = computed(() => route.path === '/')
+const isHomePage = computed(() => route.path === "/");
 const ICON_MAP: Record<string, any> = {
     sparkles: Sparkles,
     scissors: Scissors,
@@ -45,25 +45,25 @@ const ICON_MAP: Record<string, any> = {
 };
 
 const updateNavbarState = () => {
-   isScrolled.value = !isHomePage.value || window.scrollY > 20
+    isScrolled.value = !isHomePage.value || window.scrollY > 20;
 };
 
 onMounted(() => {
-  updateNavbarState()
-  window.addEventListener('scroll', updateNavbarState, { passive: true })
-})
+    updateNavbarState();
+    window.addEventListener("scroll", updateNavbarState, { passive: true });
+});
 
 onBeforeUnmount(() => {
-  window.removeEventListener('scroll', updateNavbarState)
-})
+    window.removeEventListener("scroll", updateNavbarState);
+});
 
 watch(
-  () => route.path,
-  () => {
-    closeMenu()
-    updateNavbarState()
-  },
-)
+    () => route.path,
+    () => {
+        closeMenu();
+        updateNavbarState();
+    },
+);
 
 const closeMenu = () => {
     menuOpen.value = false;
@@ -112,10 +112,21 @@ const handleKeydown = (event: KeyboardEvent) => {
     }
 };
 
+const dashboardPath = computed(() => {
+    if (!dbUser.value) return "/dashboard";
+    switch (dbUser.value.role) {
+        case "PLATFORM_ADMIN":
+            return "/admin";
+        case "BUSINESS_OWNER":
+            return "/business";
+        default:
+            return "/dashboard";
+    }
+});
+
 const handleLogout = async () => {
     closeMenu();
-    await client.auth.signOut();
-
+    await logout();
     navigateTo(NAVIGATION_PATHS.LOGIN);
 };
 </script>
@@ -178,7 +189,13 @@ const handleLogout = async () => {
                 </Transition>
 
                 <NuxtLink
-                    to="/for-business"
+                    :to="
+                        user?.role === 'BUSINESS_OWNER'
+                            ? '/business'
+                            : user?.role === 'PLATFORM_ADMIN'
+                              ? '/admin'
+                              : '/for-business'
+                    "
                     class="hidden h-10 items-center px-3 text-sm font-semibold transition-colors md:inline-flex"
                     :class="
                         isScrolled
@@ -204,7 +221,7 @@ const handleLogout = async () => {
 
                 <NuxtLink
                     v-else
-                    to="/dashboard"
+                    :to="dashboardPath"
                     class="hidden h-10 items-center gap-2 px-3 text-sm font-semibold transition-colors sm:inline-flex"
                     :class="
                         isScrolled
@@ -240,7 +257,7 @@ const handleLogout = async () => {
             </div>
         </nav>
 
-        <!-- MENU PANEL -->
+
         <Transition
             enter-active-class="transition duration-200 ease-out"
             enter-from-class="opacity-0 -translate-y-2"
@@ -341,7 +358,7 @@ const handleLogout = async () => {
 
                                 <template v-if="user">
                                     <NuxtLink
-                                        to="/dashboard"
+                                        :to="dashboardPath"
                                         class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
                                         @click="closeMenu"
                                     >
@@ -381,7 +398,11 @@ const handleLogout = async () => {
                                     </NuxtLink>
 
                                     <NuxtLink
-                                        to="/for-business"
+                                        :to="
+                                            user?.role === 'BUSINESS_OWNER'
+                                                ? '/business'
+                                                : '/for-business'
+                                        "
                                         class="flex items-center justify-between px-3 py-3 text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-100"
                                         @click="closeMenu"
                                     >
@@ -395,7 +416,6 @@ const handleLogout = async () => {
                     </template>
 
                     <template v-else>
-                        <!-- BACK -->
                         <button
                             type="button"
                             class="mb-4 inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900"
@@ -405,43 +425,22 @@ const handleLogout = async () => {
                             Explore
                         </button>
 
-                        <!-- CATEGORY DETAIL -->
                         <template v-if="activeCategory">
                             <div
                                 v-if="getActiveCategory()"
                                 class="grid gap-6 md:grid-cols-[280px_1fr]"
                             >
-                                <!-- CATEGORY INTRO -->
                                 <div
                                     class="border-b border-slate-200 pb-5 md:border-b-0 md:border-r md:pb-0 md:pr-6"
                                 >
-                                    <div
-                                        class="flex h-11 w-11 items-center justify-center bg-slate-100 text-slate-700"
-                                    >
-                                        <component
-                                            :is="
-                                                ICON_MAP[
-                                                    getActiveCategory()?.icon?.toLowerCase()
-                                                ] || CircleEllipsis
-                                            "
-                                            class="h-5 w-5"
-                                        />
-                                    </div>
 
                                     <h3
                                         class="mt-4 text-lg font-semibold text-slate-900"
                                     >
                                         {{ getActiveCategory()?.name }}
                                     </h3>
-
-                                    <p
-                                        class="mt-2 text-sm leading-6 text-slate-500"
-                                    >
-                                        {{ getActiveCategory()?.description }}
-                                    </p>
                                 </div>
 
-                                <!-- SERVICES -->
                                 <div>
                                     <p
                                         class="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400"
@@ -483,30 +482,12 @@ const handleLogout = async () => {
                                     class="group flex items-center gap-3 px-3 py-4 text-left transition-colors hover:bg-slate-100"
                                     @click="selectCategory(category.name)"
                                 >
-                                    <div
-                                        class="flex h-10 w-10 shrink-0 items-center justify-center bg-slate-100 text-slate-600 transition-colors group-hover:bg-primary/10 group-hover:text-primary"
-                                    >
-                                        <component
-                                            :is="
-                                                ICON_MAP[
-                                                    category.icon?.toLowerCase()
-                                                ] || CircleEllipsis
-                                            "
-                                            class="h-5 w-5"
-                                        />
-                                    </div>
 
                                     <div class="min-w-0 flex-1">
                                         <p
                                             class="text-sm font-semibold text-slate-900"
                                         >
                                             {{ category.name }}
-                                        </p>
-
-                                        <p
-                                            class="mt-0.5 truncate text-xs text-slate-500"
-                                        >
-                                            {{ category.description }}
                                         </p>
                                     </div>
 

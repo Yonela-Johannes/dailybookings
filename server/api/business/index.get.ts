@@ -1,6 +1,6 @@
 import { prisma } from '~/server/utils/prisma'
 import { isBusinessOwner } from '~/server/utils/auth'
-import { startOfDay, endOfDay, startOfToday } from 'date-fns'
+import { startOfDay, endOfDay } from 'date-fns'
 
 export default defineEventHandler(async (event) => {
 
@@ -13,10 +13,11 @@ export default defineEventHandler(async (event) => {
         ownerId: user.id
       }
     },
-    select: { id: true }
+    select: { id: true, slug: true }
   })
 
   const venueIds = venues.map(v => v.id)
+  const mainVenueSlug = venues[0]?.slug
 
   const today = new Date()
   const startOfTodayDate = startOfDay(today)
@@ -79,10 +80,21 @@ export default defineEventHandler(async (event) => {
     })
   ])
 
+  // Convert Decimal to number for serialization
+  const upcomingBookingsClean = upcomingBookings.map(b => ({
+    ...b,
+    priceTotal: Number(b.priceTotal),
+    services: b.services.map(s => ({
+      ...s,
+      price: Number(s.price)
+    }))
+  }))
+
   return {
     todayBookingsCount,
     totalBookingsCount,
-    todayRevenue: todayRevenue._sum.priceTotal || 0,
-    upcomingBookings
+    todayRevenue: Number(todayRevenue._sum.priceTotal || 0),
+    upcomingBookings: upcomingBookingsClean,
+    mainVenueSlug
   }
 })

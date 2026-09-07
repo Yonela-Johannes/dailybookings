@@ -1,5 +1,6 @@
 import { prisma } from '~/server/utils/prisma'
 import { z } from 'zod'
+import { isBusinessOwner } from '~/server/utils/auth'
 
 const createVenueSchema = z.object({
   name: z.string().min(2),
@@ -13,64 +14,87 @@ const createVenueSchema = z.object({
     city: z.string(),
     region: z.string(),
     postalCode: z.string(),
-    country: z.string(),
+    country: z.string().default('South Africa'),
     lat: z.number().optional(),
     lng: z.number().optional()
   }),
   contact: z.object({
     phone: z.string(),
     whatsapp: z.string().optional(),
-    email: z.string().email()
+    email: z.string().email(),
+    website: z.string().optional(),
+    instagram: z.string().optional(),
+    facebook: z.string().optional()
   }),
   bookingConfig: z.object({
-    instant: z.boolean().default(true),
-    onlinePay: z.boolean().default(false),
-    deposit: z.boolean().default(false),
-    depositPct: z.number().default(0),
+    instantConfirmation: z.boolean().default(true),
+    acceptsOnlinePayments: z.boolean().default(false),
+    requiresDeposit: z.boolean().default(false),
+    depositPercentage: z.number().default(0),
     cancellationPolicy: z.string().optional(),
-    minNoticeMinutes: z.number().default(60)
+    minimumNoticeMinutes: z.number().default(60)
   })
 })
 
 export default defineEventHandler(async (event) => {
-
-  // In a real app, we would verify the user session here
-  // const user = event.context.user
-
+  const user = await isBusinessOwner(event)
   const body = await readBody(event)
-  const ownerId = body.ownerId // Temporarily taking from body for this implementation
-
-  if (!ownerId) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Owner ID is required'
-    })
-  }
 
   try {
     const data = createVenueSchema.parse(body)
 
+    // Find user's business or create one if missing
+    let business = await prisma.business.findFirst({
+      where: { ownerId: user.id }
+    })
+
+    if (!business) {
+      business = await prisma.business.create({
+        data: {
+          ownerId: user.id,
+          name: `${user.fullName || 'My'} Business`
+        }
+      })
+    }
+
     const venue = await prisma.venue.create({
       data: {
-        name: data.name,
+        businessId: business.id,
         slug: data.slug,
+        name: data.name,
         tagline: data.tagline,
         description: data.description,
         categoryId: data.categoryId,
-        ownerId: ownerId,
-        address: data.address as any,
-        contact: data.contact as any,
-        bookingConfig: data.bookingConfig as any,
-        status: 'active'
+        status: 'DRAFT',
+        address: {
+          create: data.address
+        },
+        contact: {
+          create: data.contact
+        },
+        bookingConfig: {
+          create: data.bookingConfig
+        }
+      },
+      include: {
+        address: true,
+        contact: true,
+        bookingConfig: true
       }
     })
 
     return venue
   } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Validation failed',
+        data: error.errors
+      })
+    }
     throw createError({
-      statusCode: 400,
-      statusMessage: 'Failed to create venue',
-      data: error.message
+      statusCode: 500,
+      statusMessage: 'Failed to create venue: ' + error.message
     })
   }
 })

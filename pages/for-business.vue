@@ -325,5 +325,4 @@ const steps = [
             </div>
         </section>
     </main>
-    <Footer />
 </template>
