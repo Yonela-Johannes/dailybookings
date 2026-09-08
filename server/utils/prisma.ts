@@ -1,22 +1,26 @@
 import { PrismaPg } from '@prisma/adapter-pg'
-import pkg from '@prisma/client'
-const { PrismaClient } = pkg
+import { PrismaClient } from '@prisma/client'
 
 const connectionString = process.env.DIRECT_URL
+
 if (!connectionString) {
   throw new Error('DIRECT_URL is not defined')
 }
+
 const adapter = new PrismaPg({
   connectionString,
 })
+
 const globalForPrisma = globalThis as unknown as {
-  prisma: InstanceType<typeof PrismaClient> | undefined
+  prisma: PrismaClient | undefined
 }
+
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     adapter,
   })
+
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma
 }
