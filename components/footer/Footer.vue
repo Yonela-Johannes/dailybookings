@@ -148,7 +148,6 @@ const socialLinks = [
             <div
                 class="grid gap-12 md:grid-cols-2 lg:grid-cols-[1.35fr_1fr_1fr_1fr_1fr]"
             >
-                <!-- BRAND -->
                 <div>
                     <NuxtLink
                         :to="NAVIGATION_PATHS.HOME"
@@ -158,7 +157,7 @@ const socialLinks = [
                             <img
                                 src="/mobile-logo.png"
                                 alt="DailyBookings"
-                                class="h-8 w-auto object-contain md:hidden"
+                                class="h-6 w-auto object-contain"
                             />
                             <img
                                 src="/logo.png"

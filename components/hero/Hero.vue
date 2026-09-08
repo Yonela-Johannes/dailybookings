@@ -90,11 +90,11 @@ onBeforeUnmount(() => {
                 </div>
 
                 <form
-                    class="mt-9 w-full max-w-4xl bg-white p-2 shadow-2xl md:mt-11"
+                    class="mt-9 w-full max-w-4xl bg-white p-2 shadow-2xl md:mt-11 rounded-lg"
                     @submit.prevent="handleSearch"
                 >
                     <div
-                        class="grid grid-cols-1 gap-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+                        class="grid grid-cols-1 gap-1 md:grid-cols-[minmax(0,1fr)_auto]"
                     >
                         <div
                             class="flex h-14 min-w-0 items-center px-4 transition-colors focus-within:bg-slate-50"
@@ -115,28 +115,9 @@ onBeforeUnmount(() => {
                             />
                         </div>
 
-                        <div
-                            class="flex h-14 min-w-0 items-center border-t border-slate-100 px-4 transition-colors focus-within:bg-slate-50 md:border-l md:border-t-0"
-                        >
-                            <MapPin
-                                class="h-5 w-5 shrink-0 text-slate-400"
-                                stroke-width="1.8"
-                                aria-hidden="true"
-                            />
-
-                            <input
-                                v-model="locationQuery"
-                                type="text"
-                                name="location"
-                                autocomplete="off"
-                                placeholder="Where?"
-                                class="h-full min-w-0 w-full bg-transparent px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
-                            />
-                        </div>
-
                         <button
                             type="submit"
-                            class="h-14 bg-primary px-8 text-sm font-semibold text-white transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-white"
+                            class="rounded-lg h-14 bg-primary px-8 text-sm font-semibold text-white transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-white"
                         >
                             Search
                         </button>

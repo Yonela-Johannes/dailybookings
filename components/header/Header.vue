@@ -153,16 +153,16 @@ const handleLogout = async () => {
                 <div class="flex items-center rounded-md overflow-hidden">
                     <img
                         :src="
-                            isScrolled || menuOpen
+                            true || menuOpen
                                 ? '/mobile-logo.png'
                                 : '/mobile-logo-inverse.png'
                         "
                         alt="DailyBookings"
-                        class="object-cover hidden h-10 w-auto md:block"
+                        class="object-cover hidden h-8 w-auto md:block"
                     />
                     <img
                         :src="
-                            isScrolled || menuOpen
+                            true || menuOpen
                                 ? '/logo.png'
                                 : '/logo-inverse.png'
                         "
@@ -228,9 +228,13 @@ const handleLogout = async () => {
                     leave-to-class="opacity-0 -translate-y-1"
                 >
                     <NuxtLink
-                        v-if="isScrolled"
                         :to="NAVIGATION_PATHS.DISCOVER"
                         class="hidden h-10 items-center gap-2 px-3 text-sm font-semibold text-slate-700 transition-colors hover:text-primary sm:inline-flex"
+                        :class="
+                            isScrolled
+                                ? 'text-slate-700 hover:text-primary'
+                                : 'text-white hover:text-white/80'
+                        "
                     >
                         Discover
                     </NuxtLink>
