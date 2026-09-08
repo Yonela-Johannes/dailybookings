@@ -36,12 +36,16 @@ const footerSections = [
                 to: NAVIGATION_PATHS.DISCOVER,
             },
             {
+                label: "Local Communities",
+                to: "/community",
+            },
+            {
                 label: "How DailyBookings Works",
                 to: "/how-it-works",
             },
             {
                 label: "Book with Confidence",
-                to: "/trust-safety",
+                to: NAVIGATION_PATHS.PRIVACY,
             },
             {
                 label: "Help & Support",
@@ -61,19 +65,19 @@ const footerSections = [
             },
             {
                 label: "Professional Features",
-                to: "/business/features",
+                to: NAVIGATION_PATHS.BUSINESS_FEATURES,
             },
             {
                 label: "Pricing",
-                to: "/business/pricing",
+                to: NAVIGATION_PATHS.BUSINESS_PRICING,
             },
             {
                 label: "Success Stories",
-                to: "/business/success-stories",
+                to: NAVIGATION_PATHS.BLOG,
             },
             {
                 label: "Business Resources",
-                to: "/business/resources",
+                to: NAVIGATION_PATHS.BUSINESS_FEATURES,
             },
         ],
     },
@@ -101,7 +105,7 @@ const footerSections = [
             },
             {
                 label: "Press & Media",
-                to: "/press",
+                to: NAVIGATION_PATHS.ABOUT,
             },
         ],
     },
@@ -110,11 +114,11 @@ const footerSections = [
         title: "Legal",
         icon: Shield,
         links: [
-            { label: "Privacy Policy", to: "/privacy" },
-            { label: "Terms of Service", to: "/terms" },
-            { label: "Trust & Safety", to: "/trust-safety" },
-            { label: "Cookie Policy", to: "/cookies" },
-            { label: "Community Guidelines", to: "/guidelines" },
+            { label: "Privacy Policy", to: NAVIGATION_PATHS.PRIVACY },
+            { label: "Terms of Service", to: NAVIGATION_PATHS.TERMS },
+            { label: "Trust & Safety", to: NAVIGATION_PATHS.PRIVACY },
+            { label: "Cookie Policy", to: NAVIGATION_PATHS.COOKIES },
+            { label: "Community Guidelines", to: NAVIGATION_PATHS.TERMS },
         ],
     },
 ];
@@ -150,11 +154,18 @@ const socialLinks = [
                         :to="NAVIGATION_PATHS.HOME"
                         class="inline-flex items-center"
                     >
-                        <img
-                            src="/logo.png"
-                            alt="DailyBookings"
-                            class="h-9 w-auto rounded-md"
-                        />
+                        <div class="flex items-center overflow-hidden">
+                            <img
+                                src="/mobile-logo.png"
+                                alt="DailyBookings"
+                                class="h-8 w-auto object-contain md:hidden"
+                            />
+                            <img
+                                src="/logo.png"
+                                alt="DailyBookings"
+                                class="hidden h-8 w-auto object-contain md:block"
+                            />
+                        </div>
                     </NuxtLink>
                     <p class="mt-6 max-w-xs text-sm leading-6 text-slate-500">
                         Discover trusted local professionals and book services

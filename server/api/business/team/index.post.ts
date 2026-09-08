@@ -18,7 +18,8 @@ const teamActionSchema = z.discriminatedUnion('action', [
       title: z.string().optional(),
       bio: z.string().optional(),
       imageUrl: z.string().url().optional(),
-      schedules: z.array(scheduleSchema).optional()
+      schedules: z.array(scheduleSchema).optional(),
+      serviceIds: z.array(z.string().uuid()).optional()
     })
   }),
   z.object({
@@ -55,7 +56,7 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
       }
 
-      const { schedules, ...employeeData } = payload.data
+      const { schedules, serviceIds, ...employeeData } = payload.data
 
       return await prisma.employee.create({
         data: {
@@ -63,10 +64,14 @@ export default defineEventHandler(async (event) => {
           venueId: payload.venueId,
           schedules: schedules ? {
             create: schedules
+          } : undefined,
+          services: serviceIds ? {
+            connect: serviceIds.map(id => ({ id }))
           } : undefined
         },
         include: {
-          schedules: true
+          schedules: true,
+          services: true
         }
       })
     }
@@ -81,7 +86,7 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
       }
 
-      const { schedules, ...employeeData } = payload.data
+      const { schedules, serviceIds, ...employeeData } = payload.data
 
       return await prisma.$transaction(async (tx) => {
         if (schedules) {
@@ -96,9 +101,15 @@ export default defineEventHandler(async (event) => {
 
         return await tx.employee.update({
           where: { id: payload.id },
-          data: employeeData,
+          data: {
+            ...employeeData,
+            services: serviceIds ? {
+              set: serviceIds.map(id => ({ id }))
+            } : undefined
+          },
           include: {
-            schedules: true
+            schedules: true,
+            services: true
           }
         })
       })

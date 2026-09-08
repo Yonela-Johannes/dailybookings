@@ -6,22 +6,16 @@ const querySchema = z.object({
   loc: z.string().optional(),
   page: z.string().optional().transform(v => parseInt(v || '1')),
   limit: z.string().optional().transform(v => parseInt(v || '10')),
-  categoryId: z.string().uuid().optional()
+  categoryId: z.string().uuid().optional(),
+  minRating: z.string().optional().transform(v => v ? parseFloat(v) : undefined)
 })
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
 
   try {
-    const { q, loc, page, limit, categoryId } = querySchema.parse(query)
+    const { q, loc, page, limit, categoryId, minRating } = querySchema.parse(query)
     const skip = (page - 1) * limit
-
-    if (!q && !loc && !categoryId) {
-      return {
-        data: [],
-        meta: { total: 0, page, limit, totalPages: 0 }
-      }
-    }
 
     const where: any = {
       status: 'ACTIVE',
@@ -42,7 +36,8 @@ export default defineEventHandler(async (event) => {
             ]
           }
         } : {},
-        categoryId ? { categoryId } : {}
+        categoryId ? { categoryId } : {},
+        minRating ? { rating: { gte: minRating } } : {}
       ]
     }
 

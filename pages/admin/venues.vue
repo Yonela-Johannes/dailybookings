@@ -1,246 +1,591 @@
 <script setup lang="ts">
 import {
-  Search,
-  Filter,
-  MoreVertical,
-  CheckCircle2,
-  AlertTriangle,
-  XCircle,
-  ExternalLink,
-  MapPin,
-  Star,
-  Loader2,
-  Clock,
-  User,
-  ShieldCheck,
-  ChevronLeft,
-  ChevronRight,
-  Plus
-} from 'lucide-vue-next'
-import { format, parseISO } from 'date-fns'
+    Search,
+    MoreVertical,
+    CheckCircle2,
+    XCircle,
+    ExternalLink,
+    MapPin,
+    Star,
+    Loader2,
+    ShieldCheck,
+    ChevronLeft,
+    ChevronRight,
+    Filter,
+    Store,
+    Trash2,
+} from "lucide-vue-next";
+import { format, parseISO } from "date-fns";
+import Head from "~/components/head/Head.vue";
 
 definePageMeta({
-  layout: 'admin',
-  middleware: 'auth'
-})
+    layout: "admin",
+    middleware: "auth",
+});
 
-const search = ref('')
-const statusFilter = ref('')
-const page = ref(1)
+const search = ref("");
+const statusFilter = ref("");
+const page = ref(1);
 
-const { data: venuesData, pending, refresh } = useFetch('/api/admin/venues', {
-  query: {
-    search,
-    status: statusFilter,
-    page,
-    limit: 10
-  },
-  watch: [search, statusFilter, page]
-})
+const {
+    data: venuesData,
+    pending,
+    refresh,
+} = useFetch("/api/admin/venues", {
+    query: {
+        search,
+        status: statusFilter,
+        page,
+        limit: 10,
+    },
+    watch: [search, statusFilter, page],
+});
 
-const venues = computed(() => venuesData.value?.venues || [])
-const meta = computed(() => venuesData.value?.meta || { total: 0, page: 1, totalPages: 1 })
+const venues = computed(() => venuesData.value?.venues || []);
+
+const meta = computed(
+    () =>
+        venuesData.value?.meta || {
+            total: 0,
+            page: 1,
+            totalPages: 1,
+        },
+);
+
+const { data: communitiesRes } = await useFetch<any>("/api/admin/communities", { query: { limit: 100 } });
+const communities = computed(() => communitiesRes.value?.data || []);
+
+const updateCommunity = async (venueId: string, communityId: string | null) => {
+    try {
+        await $fetch(`/api/admin/venues/${venueId}/verify`, {
+            method: "PATCH",
+            body: { communityId },
+        });
+
+        refresh();
+    } catch (error) {
+        console.error("Failed to update venue community:", error);
+    }
+};
 
 const getStatusStyles = (status: string) => {
-  switch (status?.toLowerCase()) {
-    case 'active': return 'bg-teal-500/10 text-teal-500 border-teal-500/20 shadow-[0_0_8px_rgba(20,184,166,0.1)]'
-    case 'pending': return 'bg-amber-500/10 text-amber-500 border-amber-500/20 shadow-[0_0_8px_rgba(245,158,11,0.1)]'
-    case 'suspended': return 'bg-red-500/10 text-red-500 border-red-500/20 shadow-[0_0_8px_rgba(239,68,68,0.1)]'
-    default: return 'bg-slate-800 text-slate-400 border-slate-700'
-  }
-}
+    switch (status?.toUpperCase()) {
+        case "ACTIVE":
+            return "bg-teal-50 text-teal-700 border-teal-200";
+
+        case "PENDING":
+            return "bg-amber-50 text-amber-700 border-amber-200";
+
+        case "SUSPENDED":
+            return "bg-red-50 text-red-700 border-red-200";
+
+        default:
+            return "bg-slate-50 text-slate-600 border-slate-200";
+    }
+};
 
 const updateStatus = async (venueId: string, status: string) => {
-  try {
-    await $fetch(`/api/admin/venues/${venueId}/verify`, {
-      method: 'PATCH',
-      body: { status }
-    })
-    refresh()
-  } catch (error) {
-    console.error('Failed to update venue status:', error)
-  }
-}
+    try {
+        await $fetch(`/api/admin/venues/${venueId}/verify`, {
+            method: "PATCH",
+            body: { status },
+        });
+
+        refresh();
+    } catch (error) {
+        console.error("Failed to update venue status:", error);
+    }
+};
 
 const toggleVerification = async (venueId: string, verified: boolean) => {
-  try {
-    await $fetch(`/api/admin/venues/${venueId}/verify`, {
-      method: 'PATCH',
-      body: { verified }
-    })
-    refresh()
-  } catch (error) {
-    console.error('Failed to toggle verification:', error)
-  }
-}
+    try {
+        await $fetch(`/api/admin/venues/${venueId}/verify`, {
+            method: "PATCH",
+            body: { verified },
+        });
+
+        refresh();
+    } catch (error) {
+        console.error("Failed to update venue verification:", error);
+    }
+};
+
+const handleDelete = async (id: string) => {
+    if (
+        !confirm(
+            "Are you sure you want to delete this business? This action is permanent.",
+        )
+    ) {
+        return;
+    }
+
+    try {
+        await $fetch(`/api/admin/venues/${id}`, {
+            method: "DELETE",
+        });
+
+        refresh();
+    } catch (error) {
+        console.error("Failed to delete venue:", error);
+    }
+};
 </script>
 
 <template>
-  <div class="space-y-8">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
-      <div class="space-y-1">
-        <h1 class="text-3xl font-black text-white uppercase italic tracking-tight">Venue Moderation</h1>
-        <p class="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Business Network Trust Authority</p>
-      </div>
-      <div class="flex items-center gap-3">
-        <div class="px-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-           Total Nodes: {{ meta.total }}
-        </div>
-      </div>
-    </div>
+    <div class="space-y-8 p-20 ">
+        <!-- Page Header -->
+        <Head
+            title="Venues"
+            description="Manage business venues, verification and availability across DailyBookings"
+        />
 
-    <!-- Table Container -->
-    <div class="bg-slate-950/50 border border-slate-800 rounded-[32px] overflow-hidden shadow-2xl">
-      <div class="p-6 border-b border-slate-800 bg-slate-900/50 flex flex-col sm:flex-row items-center gap-6">
-        <div class="relative flex-1 w-full max-w-sm">
-          <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-          <input
-            v-model="search"
-            type="text"
-            placeholder="Filter by name, slug, or owner..."
-            class="w-full pl-12 pr-4 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-xs text-white focus:ring-2 focus:ring-teal-500/20 outline-none transition-all placeholder:text-slate-600 font-bold"
-          />
-        </div>
-        <div class="flex items-center gap-3 w-full sm:w-auto">
-          <select v-model="statusFilter" class="bg-slate-900 border border-slate-800 text-slate-400 text-xs font-black px-6 py-3 rounded-2xl focus:ring-2 focus:ring-teal-500/20 outline-none w-full sm:w-48 appearance-none cursor-pointer uppercase tracking-widest text-center">
-            <option value="">Global Status</option>
-            <option value="ACTIVE">Operational</option>
-            <option value="PENDING">Awaiting Audit</option>
-            <option value="SUSPENDED">Terminated</option>
-          </select>
-          <button @click="refresh" class="p-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-400 hover:text-white transition-all">
-            <Filter class="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-
-      <div class="overflow-x-auto min-h-[500px]">
-        <div v-if="pending" class="flex items-center justify-center py-40">
-          <Loader2 class="w-10 h-10 text-teal-500 animate-spin" />
-        </div>
-
-        <table v-else class="w-full text-left border-collapse">
-          <thead>
-            <tr class="border-b border-slate-800 bg-slate-950/40">
-              <th class="px-8 py-5 text-[9px] font-black text-slate-600 uppercase tracking-[0.3em]">Business Entity</th>
-              <th class="px-8 py-5 text-[9px] font-black text-slate-600 uppercase tracking-[0.3em]">Owner Authority</th>
-              <th class="px-8 py-5 text-[9px] font-black text-slate-600 uppercase tracking-[0.3em]">Operational Status</th>
-              <th class="px-8 py-5 text-[9px] font-black text-slate-600 uppercase tracking-[0.3em] text-right">Ecosystem Value</th>
-              <th class="px-8 py-5 text-[9px] font-black text-slate-600 uppercase tracking-[0.3em] text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-800/50">
-            <tr v-for="venue in venues" :key="venue.id" class="hover:bg-slate-900/40 transition-all group">
-              <td class="px-8 py-6">
-                <div class="flex items-center gap-5">
-                  <div class="w-14 h-14 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-teal-400 font-black text-xl overflow-hidden shadow-inner relative group-hover:border-teal-500/50 transition-all duration-500">
-                    <img v-if="venue.media?.[0]?.url" :src="venue.media[0].url" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
-                    <template v-else>{{ venue.name.charAt(0) }}</template>
-                  </div>
-                  <div class="min-w-0">
-                    <div class="font-black text-white flex items-center gap-3 text-lg italic tracking-tight truncate">
-                      {{ venue.name }}
-                      <NuxtLink :to="`/venue/${venue.slug}`" target="_blank" title="View Public Page">
-                        <ExternalLink class="w-4 h-4 text-slate-600 hover:text-teal-400 transition-colors" />
-                      </NuxtLink>
-                    </div>
-                    <div class="text-[10px] text-slate-500 flex items-center gap-2 mt-1 font-bold uppercase tracking-widest">
-                      <MapPin class="w-3 h-3 text-teal-500" />
-                      {{ venue.address?.city || 'N/A' }} <span class="text-slate-800">/</span> {{ venue.category?.name || 'Standard' }}
-                    </div>
-                  </div>
+        <!-- Summary -->
+        <div
+            class="flex flex-col gap-4 border-b border-slate-200 pb-6 sm:flex-row sm:items-center sm:justify-between"
+        >
+            <div class="flex items-center gap-3">
+                <div
+                    class="border border-slate-200 bg-white px-4 py-2.5 text-[11px] font-semibold text-slate-600"
+                >
+                    {{ meta.total }} venues
                 </div>
-              </td>
-              <td class="px-8 py-6">
-                <div class="flex items-center gap-3">
-                   <div class="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 font-bold text-[10px]">
-                      {{ venue.business?.owner?.fullName?.[0] || 'O' }}
-                   </div>
-                   <div class="min-w-0">
-                      <div class="text-xs font-black text-slate-300 truncate uppercase tracking-widest">{{ venue.business?.owner?.fullName || 'Root Owner' }}</div>
-                      <div class="text-[9px] text-slate-600 font-bold truncate">{{ venue.business?.owner?.email }}</div>
-                   </div>
+
+                <div
+                    class="hidden border border-slate-200 bg-white px-4 py-2.5 text-[11px] font-medium text-slate-400 sm:block"
+                >
+                    Page {{ meta.page }} of {{ meta.totalPages }}
                 </div>
-              </td>
-              <td class="px-8 py-6">
-                 <div class="flex flex-col gap-2">
-                    <span :class="['inline-flex w-fit px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-full border', getStatusStyles(venue.status)]">
-                      {{ venue.status }}
-                    </span>
-                    <button
-                      @click="toggleVerification(venue.id, !venue.business?.verified)"
-                      :class="['text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-colors', venue.business?.verified ? 'text-teal-500' : 'text-slate-600 hover:text-white']"
+            </div>
+        </div>
+
+        <!-- Main -->
+        <div class="overflow-hidden border border-slate-200 bg-white shadow-sm">
+            <!-- Filters -->
+            <div
+                class="flex flex-col gap-4 border-b border-slate-200 bg-slate-50/40 p-5 lg:flex-row lg:items-end"
+            >
+                <div class="w-full max-w-xl">
+                    <label
+                        for="business-search"
+                        class="mb-2 block text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400"
                     >
-                       <ShieldCheck :class="['w-3 h-3', venue.business?.verified ? 'fill-teal-500/20' : '']" />
-                       {{ venue.business?.verified ? 'Verified Business' : 'Unverified Identity' }}
+                        Search businesses
+                    </label>
+
+                    <div class="relative">
+                        <Search
+                            class="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                        />
+
+                        <input
+                            id="business-search"
+                            v-model="search"
+                            type="text"
+                            placeholder="Search by business name or slug..."
+                            class="h-10 w-full border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-400"
+                        />
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <div class="flex-1 lg:w-56 lg:flex-none">
+                        <label
+                            for="status-filter"
+                            class="mb-2 block text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400"
+                        >
+                            Status
+                        </label>
+
+                        <select
+                            id="status-filter"
+                            v-model="statusFilter"
+                            class="h-10 w-full border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition-colors focus:border-slate-400"
+                        >
+                            <option value="">All businesses</option>
+                            <option value="ACTIVE">Active</option>
+                            <option value="PENDING">Pending</option>
+                            <option value="SUSPENDED">Suspended</option>
+                        </select>
+                    </div>
+
+                    <button
+                        type="button"
+                        @click="refresh"
+                        class="mt-auto inline-flex h-10 w-10 shrink-0 items-center justify-center border border-slate-200 bg-white text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                        aria-label="Refresh businesses"
+                    >
+                        <Filter class="h-4 w-4" />
                     </button>
-                 </div>
-              </td>
-              <td class="px-8 py-6 text-right">
-                <div class="text-lg font-black text-white italic tracking-tighter">{{ venue._count?.bookings }} <span class="text-[10px] font-bold text-slate-600 not-italic uppercase tracking-widest ml-1">Orders</span></div>
-                <div class="flex items-center justify-end gap-1.5 text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">
-                  <Star class="w-3 h-3 text-amber-500 fill-amber-500" />
-                  {{ venue.rating.toFixed(1) }} <span class="text-slate-800">|</span> {{ venue._count?.reviews }} Feedbacks
                 </div>
-              </td>
-              <td class="px-8 py-6 text-right">
-                <div class="flex items-center justify-end gap-2">
-                  <button
-                    v-if="venue.status === 'PENDING' || venue.status === 'SUSPENDED'"
-                    @click="updateStatus(venue.id, 'ACTIVE')"
-                    class="p-2.5 bg-teal-500/10 text-teal-500 border border-teal-500/20 rounded-xl hover:bg-teal-500 hover:text-slate-950 transition-all shadow-lg shadow-teal-500/5"
-                    title="Activate Node"
-                  >
-                    <CheckCircle2 class="w-5 h-5" />
-                  </button>
-                  <button
-                    v-if="venue.status !== 'SUSPENDED'"
-                    @click="updateStatus(venue.id, 'SUSPENDED')"
-                    class="p-2.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-lg shadow-red-500/5"
-                    title="Suspend Node"
-                  >
-                    <XCircle class="w-5 h-5" />
-                  </button>
-                  <button class="p-2.5 bg-slate-900 text-slate-500 hover:text-white border border-slate-800 rounded-xl transition-all">
-                    <MoreVertical class="w-5 h-5" />
-                  </button>
+            </div>
+
+            <!-- Loading -->
+            <div
+                v-if="pending"
+                class="flex min-h-[520px] items-center justify-center"
+            >
+                <Loader2 class="h-6 w-6 animate-spin text-slate-400" />
+            </div>
+
+            <!-- Table -->
+            <div v-else-if="venues.length" class="overflow-x-auto">
+                <table class="w-full min-w-[1100px] text-left">
+                    <thead>
+                        <tr class="border-b border-slate-200 bg-slate-50/60">
+                            <th
+                                class="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                            >
+                                Business
+                            </th>
+
+                            <th
+                                class="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                            >
+                                Owner
+                            </th>
+
+                            <th
+                                class="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                            >
+                                Community
+                            </th>
+
+                            <th
+                                class="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                            >
+                                Status
+                            </th>
+
+                            <th
+                                class="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                            >
+                                Performance
+                            </th>
+
+                            <th
+                                class="px-6 py-4 text-right text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                            >
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody class="divide-y divide-slate-100">
+                        <tr
+                            v-for="venue in venues"
+                            :key="venue.id"
+                            class="group transition-colors hover:bg-slate-50/60"
+                        >
+                            <!-- Business -->
+                            <td class="px-6 py-5">
+                                <div class="flex items-center gap-4">
+                                    <div
+                                        class="h-12 w-12 shrink-0 overflow-hidden border border-slate-200 bg-slate-50"
+                                    >
+                                        <img
+                                            v-if="venue.media?.[0]?.url"
+                                            :src="venue.media[0].url"
+                                            :alt="venue.name"
+                                            class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                        />
+
+                                        <div
+                                            v-else
+                                            class="flex h-full w-full items-center justify-center text-sm font-bold text-slate-400"
+                                        >
+                                            {{
+                                                venue.name
+                                                    ?.charAt(0)
+                                                    ?.toUpperCase()
+                                            }}
+                                        </div>
+                                    </div>
+
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-2">
+                                            <div
+                                                class="max-w-[260px] truncate text-sm font-semibold text-slate-900"
+                                            >
+                                                {{ venue.name }}
+                                            </div>
+
+                                            <NuxtLink
+                                                :to="`/venue/${venue.slug}`"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="shrink-0 text-slate-400 transition-colors hover:text-slate-900"
+                                                title="View public page"
+                                            >
+                                                <ExternalLink
+                                                    class="h-3.5 w-3.5"
+                                                />
+                                            </NuxtLink>
+                                        </div>
+
+                                        <div
+                                            class="mt-1 flex items-center gap-2 text-xs text-slate-400"
+                                        >
+                                            <MapPin
+                                                class="h-3.5 w-3.5 shrink-0"
+                                            />
+
+                                            <span>
+                                                {{
+                                                    venue.address?.city ||
+                                                    "Location unavailable"
+                                                }}
+                                            </span>
+
+                                            <span class="text-slate-200">
+                                                ·
+                                            </span>
+
+                                            <span
+                                                class="max-w-[140px] truncate"
+                                            >
+                                                {{
+                                                    venue.category?.name ||
+                                                    "Uncategorised"
+                                                }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Owner -->
+                            <td class="px-6 py-5">
+                                <div class="max-w-[220px]">
+                                    <div
+                                        class="truncate text-sm font-medium text-slate-800"
+                                    >
+                                        {{
+                                            venue.business?.owner?.fullName ||
+                                            "No owner"
+                                        }}
+                                    </div>
+
+                                    <div
+                                        class="mt-1 truncate text-xs text-slate-400"
+                                    >
+                                        {{
+                                            venue.business?.owner?.email || "—"
+                                        }}
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Community -->
+                            <td class="px-6 py-5">
+                                <div class="max-w-[180px]">
+                                    <select
+                                        :value="venue.communityId || ''"
+                                        @change="updateCommunity(venue.id, ($event.target as HTMLSelectElement).value || null)"
+                                        class="h-9 w-full border border-slate-200 bg-white px-2 text-xs outline-none focus:border-primary"
+                                    >
+                                        <option value="">No community</option>
+                                        <option v-for="comm in communities" :key="comm.id" :value="comm.id">{{ comm.name }}</option>
+                                    </select>
+                                </div>
+                            </td>
+
+                            <!-- Status -->
+                            <td class="px-6 py-5">
+                                <div class="space-y-2.5">
+                                    <span
+                                        :class="[
+                                            'inline-flex border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide',
+                                            getStatusStyles(venue.status),
+                                        ]"
+                                    >
+                                        {{ venue.status }}
+                                    </span>
+
+                                    <button
+                                        type="button"
+                                        @click="
+                                            toggleVerification(
+                                                venue.id,
+                                                !venue.business?.verified,
+                                            )
+                                        "
+                                        :class="[
+                                            'flex items-center gap-1.5 text-xs font-medium transition-colors',
+                                            venue.business?.verified
+                                                ? 'text-teal-700 hover:text-teal-800'
+                                                : 'text-slate-400 hover:text-slate-700',
+                                        ]"
+                                    >
+                                        <ShieldCheck class="h-3.5 w-3.5" />
+
+                                        {{
+                                            venue.business?.verified
+                                                ? "Verified"
+                                                : "Verify business"
+                                        }}
+                                    </button>
+                                </div>
+                            </td>
+
+                            <!-- Performance -->
+                            <td class="px-6 py-5">
+                                <div class="flex items-center gap-4">
+                                    <div>
+                                        <div
+                                            class="text-sm font-semibold text-slate-900"
+                                        >
+                                            {{ venue._count?.bookings || 0 }}
+                                            <span
+                                                class="font-normal text-slate-400"
+                                            >
+                                                bookings
+                                            </span>
+                                        </div>
+
+                                        <div
+                                            class="mt-1 text-xs text-slate-400"
+                                        >
+                                            {{ venue._count?.reviews || 0 }}
+                                            reviews
+                                        </div>
+                                    </div>
+
+                                    <div class="h-8 w-px bg-slate-200"></div>
+
+                                    <div class="flex items-center gap-1.5">
+                                        <Star
+                                            class="h-3.5 w-3.5 fill-amber-400 text-amber-400"
+                                        />
+
+                                        <span
+                                            class="text-sm font-semibold text-slate-800"
+                                        >
+                                            {{
+                                                Number(
+                                                    venue.rating || 0,
+                                                ).toFixed(1)
+                                            }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Actions -->
+                            <td class="px-6 py-5">
+                                <div
+                                    class="flex items-center justify-end gap-2"
+                                >
+                                    <button
+                                        v-if="
+                                            venue.status === 'PENDING' ||
+                                            venue.status === 'SUSPENDED'
+                                        "
+                                        type="button"
+                                        @click="
+                                            updateStatus(venue.id, 'ACTIVE')
+                                        "
+                                        class="inline-flex h-9 w-9 items-center justify-center border border-teal-200 bg-white text-teal-600 transition-colors hover:bg-teal-50"
+                                        title="Activate business"
+                                        aria-label="Activate business"
+                                    >
+                                        <CheckCircle2 class="h-4 w-4" />
+                                    </button>
+
+                                    <button
+                                        v-if="venue.status !== 'SUSPENDED'"
+                                        type="button"
+                                        @click="
+                                            updateStatus(venue.id, 'SUSPENDED')
+                                        "
+                                        class="inline-flex h-9 w-9 items-center justify-center border border-red-200 bg-white text-red-500 transition-colors hover:bg-red-50"
+                                        title="Suspend business"
+                                        aria-label="Suspend business"
+                                    >
+                                        <XCircle class="h-4 w-4" />
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        @click="handleDelete(venue.id)"
+                                        class="inline-flex h-9 w-9 items-center justify-center border border-slate-200 bg-white text-slate-400 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                                        title="Delete business"
+                                        aria-label="Delete business"
+                                    >
+                                        <Trash2 class="h-4 w-4" />
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        class="inline-flex h-9 w-9 items-center justify-center border border-slate-800 bg-slate-900 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+                                        aria-label="More actions"
+                                    >
+                                        <MoreVertical class="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty -->
+            <div
+                v-else
+                class="flex min-h-[520px] flex-col items-center justify-center px-6 text-center"
+            >
+                <div
+                    class="mb-5 flex h-14 w-14 items-center justify-center border border-slate-200 bg-slate-50"
+                >
+                    <Store class="h-6 w-6 text-slate-300" />
                 </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
 
-        <div v-if="venues.length === 0 && !pending" class="p-40 text-center text-slate-500">
-           <div class="mb-6 flex justify-center opacity-10">
-              <Store class="w-24 h-24" />
-           </div>
-           <p class="font-black uppercase tracking-[0.3em] text-xs">No matching ecosystem nodes detected</p>
-        </div>
-      </div>
+                <h3 class="text-base font-semibold text-slate-900">
+                    No businesses found
+                </h3>
 
-      <!-- Pagination -->
-      <div class="p-8 bg-slate-950/40 border-t border-slate-800 flex items-center justify-between">
-        <div class="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em]">
-          Sector {{ meta.page }} / {{ meta.totalPages }} <span class="mx-3 text-slate-800">|</span> Global Map: {{ meta.total }} Entities
+                <p class="mt-1 max-w-sm text-sm text-slate-400">
+                    Try adjusting your search or status filter.
+                </p>
+            </div>
+
+            <!-- Pagination -->
+            <div
+                class="flex flex-col gap-4 border-t border-slate-200 bg-slate-50/40 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+                <p class="text-xs text-slate-400">
+                    Showing page
+                    <span class="font-semibold text-slate-600">
+                        {{ meta.page }}
+                    </span>
+                    of
+                    <span class="font-semibold text-slate-600">
+                        {{ meta.totalPages }}
+                    </span>
+                    · {{ meta.total }} total
+                </p>
+
+                <div class="flex items-center gap-2">
+                    <button
+                        type="button"
+                        :disabled="page === 1"
+                        @click="page--"
+                        class="inline-flex h-9 w-9 items-center justify-center border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+                        aria-label="Previous page"
+                    >
+                        <ChevronLeft class="h-4 w-4" />
+                    </button>
+
+                    <button
+                        type="button"
+                        :disabled="page >= meta.totalPages"
+                        @click="page++"
+                        class="inline-flex h-9 w-9 items-center justify-center border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+                        aria-label="Next page"
+                    >
+                        <ChevronRight class="h-4 w-4" />
+                    </button>
+                </div>
+            </div>
         </div>
-        <div class="flex items-center gap-4">
-          <button
-            :disabled="page === 1"
-            @click="page--"
-            class="p-3 bg-slate-900 border border-slate-800 text-slate-500 font-bold rounded-2xl disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-800 transition-all shadow-lg"
-          >
-            <ChevronLeft class="w-5 h-5" />
-          </button>
-          <button
-            :disabled="page >= meta.totalPages"
-            @click="page++"
-            class="p-3 bg-slate-900 border border-slate-800 text-white font-bold rounded-2xl disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-800 transition-all shadow-lg"
-          >
-            <ChevronRight class="w-5 h-5" />
-          </button>
-        </div>
-      </div>
     </div>
-  </div>
 </template>

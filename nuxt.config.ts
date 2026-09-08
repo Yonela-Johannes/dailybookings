@@ -3,7 +3,13 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ["@nuxtjs/supabase", "@nuxtjs/tailwindcss", "@nuxtjs/google-fonts"],
   supabase: {
-    redirect: false
+    redirect: false,
+    types: '~/types/supabase.ts',
+    cookieOptions: {
+      maxAge: 60 * 60 * 24 * 7,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production'
+    }
   },
   tailwindcss: {
     viewer: false
@@ -11,5 +17,10 @@ export default defineNuxtConfig({
   googleFonts: {
     families: { Caveat: [600, 700] },
   },
-  css: ["~/assets/css/main.css"]
+  css: ["~/assets/css/main.css"],
+  runtimeConfig: {
+    public: {
+      mapboxAccessToken: process.env.NUXT_PUBLIC_MAPBOX_ACCESS_TOKEN
+    }
+  }
 })

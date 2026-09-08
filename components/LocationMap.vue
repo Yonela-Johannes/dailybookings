@@ -1,0 +1,147 @@
+<script setup lang="ts">
+interface MapPoint {
+    id: string;
+    name: string;
+    latitude: number;
+    longitude: number;
+    slug?: string;
+    category?: string;
+}
+
+const props = defineProps<{
+    points: MapPoint[];
+    center?: [number, number];
+    zoom?: number;
+}>();
+
+const config = useRuntimeConfig();
+const accessToken = config.public.mapboxAccessToken || "";
+
+const mapContainer = ref<HTMLElement | null>(null);
+const map = ref<any>(null);
+const markers = ref<any[]>([]);
+
+useHead({
+    script: [
+        {
+            src: 'https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js',
+            onload: () => initMap()
+        }
+    ],
+    link: [
+        {
+            rel: 'stylesheet',
+            href: 'https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css'
+        }
+    ]
+});
+
+const initMap = () => {
+    if (!mapContainer.value || !window.mapboxgl || map.value) return;
+
+    window.mapboxgl.accessToken = accessToken;
+
+    const initialCenter = props.center || [18.4241, -33.9249]; // Default to Cape Town area if not provided
+    const initialZoom = props.zoom || 5;
+
+    map.value = new window.mapboxgl.Map({
+        container: mapContainer.value,
+        style: 'mapbox://styles/mapbox/navigation-night-v1',
+        center: initialCenter,
+        zoom: initialZoom,
+    });
+
+    map.value.addControl(new window.mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
+
+    map.value.on('load', () => {
+        updateMarkers();
+        fitBounds();
+    });
+};
+
+const updateMarkers = () => {
+    if (!map.value || !window.mapboxgl) return;
+
+    // Clear existing markers
+    markers.value.forEach(m => m.remove());
+    markers.value = [];
+
+    props.points.forEach(point => {
+        const el = document.createElement('div');
+        el.className = 'custom-marker';
+        el.style.width = '24px';
+        el.style.height = '24px';
+        el.style.backgroundColor = '#33689c';
+        el.style.borderRadius = '50%';
+        el.style.border = '2px solid white';
+        el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+        el.style.cursor = 'pointer';
+
+        const marker = new window.mapboxgl.Marker(el)
+            .setLngLat([point.longitude, point.latitude])
+            .setPopup(new window.mapboxgl.Popup({ offset: 25 })
+                .setHTML(`
+                    <div class="p-2 min-w-[120px]">
+                        <p class="font-bold text-slate-900 text-sm">${point.name}</p>
+                        <p class="text-[10px] text-slate-500 uppercase font-semibold">${point.category || ''}</p>
+                        <a href="/venue/${point.slug}" class="mt-2 block text-[10px] font-bold text-primary uppercase tracking-wider hover:underline">View Details →</a>
+                    </div>
+                `))
+            .addTo(map.value!);
+
+        markers.value.push(marker);
+    });
+};
+
+const fitBounds = () => {
+    if (!map.value || !window.mapboxgl || props.points.length === 0) return;
+
+    const bounds = new window.mapboxgl.LngLatBounds();
+    props.points.forEach(p => bounds.extend([p.longitude, p.latitude]));
+
+    map.value.fitBounds(bounds, {
+        padding: 50,
+        maxZoom: 12,
+        duration: 1000
+    });
+};
+
+onMounted(() => {
+    if (window.mapboxgl) {
+        initMap();
+    }
+});
+
+onUnmounted(() => {
+    map.value?.remove();
+});
+
+watch(() => props.points, () => {
+    updateMarkers();
+    fitBounds();
+}, { deep: true });
+</script>
+
+<template>
+    <div class="relative w-full h-full min-h-[400px]">
+        <div ref="mapContainer" class="absolute inset-0 rounded-xl overflow-hidden shadow-sm border border-slate-200 bg-slate-50" />
+    </div>
+</template>
+
+<style>
+.mapboxgl-popup-content {
+    padding: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #f1f5f9;
+}
+.mapboxgl-popup-close-button {
+    padding: 4px 8px;
+    color: #94a3b8;
+}
+.custom-marker:hover {
+    transform: scale(1.1);
+    background-color: #000 !important;
+}
+</style>

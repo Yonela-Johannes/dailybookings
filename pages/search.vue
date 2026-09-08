@@ -1,39 +1,77 @@
 <script setup lang="ts">
 import {
-  Search,
-  MapPin,
-  Filter,
-  Star,
-  Heart,
-  ChevronDown,
-  LayoutGrid,
-  List,
-  SlidersHorizontal,
-  Navigation,
-  ArrowRight,
-  Loader2,
-} from 'lucide-vue-next'
-import { CATEGORIES, NAVIGATION_PATHS, POPULAR_SERVICES, LOCATIONS } from "~/utils/constants";
+    Search,
+    MapPin,
+    Star,
+    Bookmark,
+    ChevronDown,
+    LayoutGrid,
+    List,
+    ArrowUpRight,
+    X,
+} from "lucide-vue-next";
+import { NAVIGATION_PATHS } from "~/utils/constants";
 
-const route = useRoute()
+const route = useRoute();
+const { toggleFavorite, isFavorite } = useFavorites();
 
-const { data: searchResults, pending, refresh } = await useAsyncData('search-results', () => $fetch('/api/search', {
-  params: {
-    q: route.query.search,
-    category: route.query.category,
-    location: route.query.location
-  }
-}))
+const searchQuery = ref((route.query.search as string) || "");
+const locationQuery = ref((route.query.location as string) || "");
+const minRating = ref(
+    route.query.rating ? parseFloat(route.query.rating as string) : 0,
+);
 
-const viewMode = ref<'grid' | 'list'>('grid')
-const sortBy = ref('popular')
+const viewMode = ref<"grid" | "list">("grid");
+const sortBy = ref("popular");
+const showMapMobile = ref(false);
 
-watch(() => route.query, () => {
-    refresh()
-})
+const {
+    data: searchResultsRes,
+    pending,
+    refresh,
+} = await useAsyncData(
+    "search-results",
+    () =>
+        $fetch<any>("/api/search", {
+            params: {
+                q: searchQuery.value || undefined,
+                category: route.query.category || undefined,
+                loc: locationQuery.value || undefined,
+                minRating: minRating.value || undefined,
+            },
+        }),
+    {
+        watch: [searchQuery, locationQuery, minRating],
+    },
+);
 
-const searchQuery = ref(route.query.search as string || '')
-const locationQuery = ref(route.query.location as string || '')
+const searchResults = computed(() => searchResultsRes.value?.data || []);
+
+const mapPoints = computed(() =>
+    searchResults.value
+        .map((venue: any) => ({
+            id: venue.id,
+            name: venue.name,
+            latitude: venue.address?.lat || 0,
+            longitude: venue.address?.lng || 0,
+            slug: venue.slug,
+            category: venue.category?.name,
+        }))
+        .filter((point: any) => point.latitude !== 0 && point.longitude !== 0),
+);
+
+watch(
+    () => route.query,
+    () => {
+        searchQuery.value = (route.query.search as string) || "";
+        locationQuery.value = (route.query.location as string) || "";
+        minRating.value = route.query.rating
+            ? parseFloat(route.query.rating as string)
+            : 0;
+
+        refresh();
+    },
+);
 
 const handleSearch = () => {
     navigateTo({
@@ -41,176 +79,468 @@ const handleSearch = () => {
         query: {
             search: searchQuery.value || undefined,
             location: locationQuery.value || undefined,
+            rating: minRating.value || undefined,
+            category: route.query.category || undefined,
         },
     });
+};
+
+const handleRatingFilter = (rating: number) => {
+    minRating.value = minRating.value === rating ? 0 : rating;
+    handleSearch();
+};
+
+const handleFavorite = async (venueId: string) => {
+    await toggleFavorite(venueId);
 };
 </script>
 
 <template>
-  <main class="bg-white min-h-screen">
-    <!-- Search Bar (Sticky-ish) -->
-    <div class="bg-white border-b border-slate-200 sticky top-16 z-20">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <form class="flex flex-col md:flex-row gap-px border border-slate-200 bg-slate-200 overflow-hidden" @submit.prevent="handleSearch">
-          <div class="flex-1 bg-white flex items-center px-4 py-3 focus-within:bg-slate-50 transition-colors">
-            <Search class="w-5 h-5 text-slate-400 shrink-0" />
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Search services..."
-              class="w-full pl-3 text-sm text-slate-950 font-semibold border-0 focus:ring-0 outline-none placeholder:text-slate-400"
-            />
-          </div>
-          <div class="flex-1 bg-white flex items-center px-4 py-3 focus-within:bg-slate-50 transition-colors">
-            <MapPin class="w-5 h-5 text-slate-400 shrink-0" />
-            <input
-              v-model="locationQuery"
-              type="text"
-              placeholder="Location (e.g. Cape Town)"
-              class="w-full pl-3 text-sm text-slate-950 font-semibold border-0 focus:ring-0 outline-none placeholder:text-slate-400"
-            />
-          </div>
-          <button type="submit" class="bg-primary px-10 py-4 text-sm font-bold text-white hover:bg-slate-950 transition-all flex items-center justify-center gap-2">
-            Update Search
-          </button>
-        </form>
-      </div>
-    </div>
+    <main class="min-h-screen bg-white pt-16">
+        <!-- Search -->
+        <section
+            class="sticky top-16 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-sm"
+        >
+            <div class="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+                <form
+                    class="flex flex-col border border-slate-200 bg-white sm:flex-row"
+                    @submit.prevent="handleSearch"
+                >
+                    <div
+                        class="flex min-w-0 flex-1 items-center border-b border-slate-200 px-4 sm:border-b-0 sm:border-r"
+                    >
+                        <Search class="h-4 w-4 shrink-0 text-slate-400" />
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div class="flex flex-col lg:flex-row gap-16">
-        <!-- Sidebar Filters -->
-        <aside class="w-full lg:w-64 space-y-12 hidden lg:block">
-          <div>
-            <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-6">Categories</h3>
-            <div class="space-y-4">
-              <NuxtLink
-                v-for="cat in CATEGORIES"
-                :key="cat.slug"
-                :to="{ path: NAVIGATION_PATHS.SEARCH, query: { ...route.query, category: cat.slug } }"
-                class="flex items-center justify-between group"
-                :class="route.query.category === cat.slug ? 'text-primary' : 'text-slate-600 hover:text-slate-950'"
-              >
-                <span class="text-sm font-semibold transition-colors">{{ cat.name }}</span>
-                <ArrowRight class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-all" />
-              </NuxtLink>
+                        <input
+                            v-model="searchQuery"
+                            type="text"
+                            placeholder="Search services, businesses..."
+                            class="w-full border-0 bg-transparent px-3 py-3 text-sm text-slate-950 outline-none ring-0 placeholder:text-slate-400 focus:ring-0"
+                        />
+                    </div>
+
+                    <div
+                        class="flex min-w-0 flex-1 items-center border-b border-slate-200 px-4 sm:border-b-0 sm:border-r"
+                    >
+                        <MapPin class="h-4 w-4 shrink-0 text-slate-400" />
+
+                        <input
+                            v-model="locationQuery"
+                            type="text"
+                            placeholder="Location"
+                            class="w-full border-0 bg-transparent px-3 py-3 text-sm text-slate-950 outline-none ring-0 placeholder:text-slate-400 focus:ring-0"
+                        />
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="flex h-12 items-center justify-center gap-2 bg-slate-950 px-7 text-sm font-semibold text-white transition-colors hover:bg-primary"
+                    >
+                        <Search class="h-4 w-4" />
+                        Search
+                    </button>
+                </form>
             </div>
-          </div>
+        </section>
 
-          <div>
-            <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-6">Filters</h3>
-            <div class="space-y-6">
-                 <!-- Rating -->
-                 <div class="space-y-3">
-                    <p class="text-xs font-bold text-slate-950">Minimum Rating</p>
-                    <div class="flex flex-wrap gap-2">
-                        <button v-for="r in [4.5, 4.0, 3.5]" :key="r" class="px-3 py-1.5 border border-slate-200 text-xs font-bold hover:border-slate-950 transition-colors">
-                            {{ r }}+
+        <!-- Content -->
+        <div class="mx-auto max-w-8xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+            <div class="grid gap-10 xl:grid-cols-[220px_minmax(0,1fr)_580px]">
+                <!-- Filters -->
+                <aside class="hidden xl:block">
+                    <div class="sticky top-36">
+                        <div class="border-b border-slate-200 pb-4">
+                            <p
+                                class="text-[10px] font-bold uppercase tracking-[0.18em] text-primary"
+                            >
+                                Refine
+                            </p>
+
+                            <h2
+                                class="mt-2 text-sm font-semibold text-slate-950"
+                            >
+                                Filters
+                            </h2>
+                        </div>
+
+                        <div class="py-6">
+                            <p
+                                class="mb-3 text-xs font-semibold text-slate-950"
+                            >
+                                Minimum rating
+                            </p>
+
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    v-for="rating in [4.5, 4, 3.5]"
+                                    :key="rating"
+                                    type="button"
+                                    class="border px-3 py-2 text-xs font-medium transition-colors"
+                                    :class="
+                                        minRating === rating
+                                            ? 'border-slate-950 bg-slate-950 text-white'
+                                            : 'border-slate-200 text-slate-600 hover:border-slate-950 hover:text-slate-950'
+                                    "
+                                    @click="handleRatingFilter(rating)"
+                                >
+                                    {{ rating }}+
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Results -->
+                <section class="min-w-0">
+                    <!-- Results header -->
+                    <div
+                        class="mb-6 flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between"
+                    >
+                        <div>
+                            <p
+                                class="text-[10px] font-bold uppercase tracking-[0.18em] text-primary"
+                            >
+                                Discover
+                            </p>
+
+                            <h1
+                                class="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-950"
+                            >
+                                {{ searchResults.length }} businesses
+                            </h1>
+
+                            <p
+                                v-if="route.query.search"
+                                class="mt-1 text-sm text-slate-500"
+                            >
+                                Results for
+                                <span class="font-medium text-slate-900">
+                                    “{{ route.query.search }}”
+                                </span>
+                            </p>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <div class="flex border border-slate-200">
+                                <button
+                                    type="button"
+                                    class="flex h-9 w-9 items-center justify-center transition-colors"
+                                    :class="
+                                        viewMode === 'grid'
+                                            ? 'bg-slate-950 text-white'
+                                            : 'text-slate-400 hover:text-slate-950'
+                                    "
+                                    aria-label="Grid view"
+                                    @click="viewMode = 'grid'"
+                                >
+                                    <LayoutGrid class="h-4 w-4" />
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="flex h-9 w-9 items-center justify-center transition-colors"
+                                    :class="
+                                        viewMode === 'list'
+                                            ? 'bg-slate-950 text-white'
+                                            : 'text-slate-400 hover:text-slate-950'
+                                    "
+                                    aria-label="List view"
+                                    @click="viewMode = 'list'"
+                                >
+                                    <List class="h-4 w-4" />
+                                </button>
+                            </div>
+
+                            <div class="relative hidden sm:block">
+                                <select
+                                    v-model="sortBy"
+                                    class="h-9 appearance-none border border-slate-200 bg-white px-3 pr-8 text-xs font-medium text-slate-700 outline-none focus:border-slate-950"
+                                >
+                                    <option value="popular">
+                                        Most Popular
+                                    </option>
+
+                                    <option value="rating">
+                                        Highest Rated
+                                    </option>
+
+                                    <option value="newest">New Arrivals</option>
+                                </select>
+
+                                <ChevronDown
+                                    class="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mobile map -->
+                    <div class="mb-5 flex xl:hidden">
+                        <button
+                            type="button"
+                            class="inline-flex h-9 items-center gap-2 border border-slate-200 px-3 text-xs font-semibold text-slate-900 transition-colors hover:border-slate-950"
+                            @click="showMapMobile = true"
+                        >
+                            <MapPin class="h-3.5 w-3.5" />
+                            View map
                         </button>
                     </div>
-                 </div>
-            </div>
-          </div>
-        </aside>
 
-        <!-- Results Area -->
-        <div class="flex-1">
-          <div class="flex items-center justify-between mb-10 pb-6 border-b border-slate-100">
-            <div>
-              <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Search Results</p>
-              <h2 class="mt-2 text-2xl font-bold text-slate-950">
-                {{ searchResults?.length || 0 }} results found
-                <span v-if="route.query.search" class="text-slate-400 font-medium ml-2">for "{{ route.query.search }}"</span>
-              </h2>
-            </div>
+                    <!-- Loading -->
+                    <div
+                        v-if="pending"
+                        class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-"
+                    >
+                        <div
+                            v-for="i in 6"
+                            :key="i"
+                            class="overflow-hidden border border-slate-200"
+                        >
+                            <div
+                                class="aspect-[4/3] animate-pulse bg-slate-100"
+                            />
 
-            <div class="flex items-center gap-6">
-              <div class="flex border border-slate-200 bg-slate-50 p-1">
-                <button
-                  @click="viewMode = 'grid'"
-                  :class="['p-2 transition-all', viewMode === 'grid' ? 'bg-white text-slate-950 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600']"
-                >
-                  <LayoutGrid class="w-4 h-4" />
-                </button>
-                <button
-                  @click="viewMode = 'list'"
-                  :class="['p-2 transition-all', viewMode === 'list' ? 'bg-white text-slate-950 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600']"
-                >
-                  <List class="w-4 h-4" />
-                </button>
-              </div>
-
-              <div class="relative hidden sm:block">
-                <select v-model="sortBy" class="appearance-none bg-white border border-slate-200 px-4 py-2 pr-10 text-xs font-bold uppercase tracking-widest text-slate-950 outline-none focus:border-primary">
-                    <option value="popular">Most Popular</option>
-                    <option value="rating">Highest Rated</option>
-                    <option value="newest">New Arrivals</option>
-                </select>
-                <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-              </div>
-            </div>
-          </div>
-
-          <div v-if="pending" class="grid grid-cols-1 md:grid-cols-2 gap-10">
-            <div v-for="i in 4" :key="i" class="animate-pulse bg-slate-50 border border-slate-100 h-[400px]"></div>
-          </div>
-
-          <div v-else-if="searchResults?.length > 0" :class="[viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-10' : 'space-y-10']">
-            <NuxtLink
-                v-for="venue in searchResults"
-                :key="venue.id"
-                :to="NAVIGATION_PATHS.VENUE(venue.slug)"
-                class="group block border border-slate-100 bg-white hover:border-slate-200 transition-all duration-300 flex"
-                :class="viewMode === 'grid' ? 'flex-col' : 'flex-row items-center gap-8'"
-            >
-              <div :class="['relative overflow-hidden bg-slate-50 border-slate-100', viewMode === 'grid' ? 'aspect-[4/3] border-b' : 'aspect-square w-64 border-r']">
-                <img :src="venue.portfolio?.find(m => m.featured)?.url || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80'" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
-
-                <div class="absolute top-4 left-4">
-                    <div class="px-2 py-1 bg-white text-slate-950 text-[8px] font-bold uppercase tracking-[0.2em] shadow-sm">
-                        {{ venue.category?.name }}
-                    </div>
-                </div>
-              </div>
-
-              <div class="p-8 flex-1 flex flex-col">
-                <div class="flex justify-between items-start mb-4">
-                  <h3 class="text-xl font-bold text-slate-950 group-hover:text-primary transition-colors">{{ venue.name }}</h3>
-                  <div class="flex items-center gap-1 text-primary">
-                    <Star class="w-3.5 h-3.5 fill-primary" />
-                    <span class="text-xs font-bold">{{ venue.rating }}</span>
-                  </div>
-                </div>
-
-                <p class="text-sm text-slate-500 mb-8 line-clamp-2 leading-relaxed">
-                  {{ venue.tagline || venue.description }}
-                </p>
-
-                <div class="mt-auto pt-8 border-t border-slate-100 flex items-center justify-between">
-                   <div class="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                        <MapPin class="w-3 h-3 text-primary" stroke-width="2" />
-                        {{ venue.address?.suburb }}, {{ venue.address?.city }}
+                            <div class="space-y-3 p-5">
+                                <div
+                                    class="h-4 w-2/3 animate-pulse bg-slate-100"
+                                />
+                                <div
+                                    class="h-3 w-1/2 animate-pulse bg-slate-100"
+                                />
+                                <div
+                                    class="h-3 w-3/4 animate-pulse bg-slate-100"
+                                />
+                            </div>
+                        </div>
                     </div>
 
-                   <ArrowRight class="w-5 h-5 text-slate-950 transition-transform group-hover:translate-x-1" stroke-width="1.5" />
-                </div>
-              </div>
-            </NuxtLink>
-          </div>
+                    <!-- Results -->
+                    <div
+                        v-else-if="searchResults.length"
+                        :class="
+                            viewMode === 'grid'
+                                ? 'grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3'
+                                : 'space-y-4'
+                        "
+                    >
+                        <article
+                            v-for="venue in searchResults"
+                            :key="venue.id"
+                            class="group relative overflow-hidden border border-slate-200 bg-white transition-colors hover:border-slate-300"
+                            :class="
+                                viewMode === 'list'
+                                    ? 'flex flex-col sm:flex-row'
+                                    : ''
+                            "
+                        >
+                            <!-- Image -->
+                            <NuxtLink
+                                :to="NAVIGATION_PATHS.VENUE(venue.slug)"
+                                :class="
+                                    viewMode === 'list'
+                                        ? 'relative block aspect-[4/3] shrink-0 overflow-hidden bg-slate-100 sm:aspect-auto sm:h-auto sm:w-56'
+                                        : 'relative block aspect-[4/3] overflow-hidden bg-slate-100'
+                                "
+                            >
+                                <img
+                                    :src="
+                                        venue.media?.[0]?.url ||
+                                        'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80'
+                                    "
+                                    :alt="venue.name"
+                                    loading="lazy"
+                                    class="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.025]"
+                                />
 
-          <div v-else class="py-24 text-center border-2 border-dashed border-slate-100">
-            <div class="w-16 h-16 bg-slate-50 flex items-center justify-center mx-auto mb-8">
-              <Search class="w-8 h-8 text-slate-200" />
+                                <div
+                                    class="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                                />
+
+                                <div
+                                    v-if="venue.category?.name"
+                                    class="absolute left-3 top-3 bg-white px-2.5 py-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-900"
+                                >
+                                    {{ venue.category.name }}
+                                </div>
+                            </NuxtLink>
+
+                            <!-- Favorite -->
+                            <button
+                                type="button"
+                                class="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center border border-white/40 bg-black/25 text-white backdrop-blur-sm transition-all hover:bg-black/50 active:scale-95"
+                                :class="{
+                                    '!border-white/90 !bg-white/90 !text-primary':
+                                        isFavorite(venue.id),
+                                }"
+                                :aria-label="`Save ${venue.name}`"
+                                @click.stop.prevent="handleFavorite(venue.id)"
+                            >
+                                <Bookmark
+                                    class="h-4 w-4"
+                                    :class="{
+                                        'fill-current': isFavorite(venue.id),
+                                    }"
+                                />
+                            </button>
+
+                            <!-- Content -->
+                            <div
+                                class="flex min-w-0 flex-1 flex-col p-5 sm:p-6"
+                            >
+                                <div
+                                    class="flex items-start justify-between gap-4"
+                                >
+                                    <NuxtLink
+                                        :to="NAVIGATION_PATHS.VENUE(venue.slug)"
+                                        class="min-w-0"
+                                    >
+                                        <h2
+                                            class="truncate text-base font-semibold tracking-[-0.01em] text-slate-950 transition-colors group-hover:text-primary"
+                                        >
+                                            {{ venue.name }}
+                                        </h2>
+                                    </NuxtLink>
+
+                                    <div
+                                        class="flex shrink-0 items-center gap-1"
+                                    >
+                                        <Star
+                                            class="h-3.5 w-3.5 fill-amber-400 text-amber-400"
+                                        />
+
+                                        <span
+                                            class="text-xs font-semibold tabular-nums text-slate-900"
+                                        >
+                                            {{
+                                                Number(
+                                                    venue.rating || 0,
+                                                ).toFixed(1)
+                                            }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <p
+                                    class="mt-2 line-clamp-2 text-sm leading-5 text-slate-500"
+                                >
+                                    {{
+                                        venue.tagline ||
+                                        venue.description ||
+                                        "Discover this local business."
+                                    }}
+                                </p>
+
+                                <div
+                                    class="mt-auto flex items-end justify-between gap-4 pt-5"
+                                >
+                                    <div class="min-w-0">
+                                        <div
+                                            class="flex items-center gap-1.5 text-xs text-slate-500"
+                                        >
+                                            <MapPin
+                                                class="h-3.5 w-3.5 shrink-0 text-slate-400"
+                                            />
+
+                                            <span class="truncate">
+                                                {{
+                                                    venue.address?.suburb ||
+                                                    venue.address?.city ||
+                                                    "Location unavailable"
+                                                }}
+                                            </span>
+                                        </div>
+
+                                        <p
+                                            v-if="venue.category?.name"
+                                            class="mt-1 text-xs text-slate-400"
+                                        >
+                                            {{ venue.category.name }}
+                                        </p>
+                                    </div>
+
+                                    <NuxtLink
+                                        :to="NAVIGATION_PATHS.VENUE(venue.slug)"
+                                        class="flex h-8 w-8 shrink-0 items-center justify-center border border-slate-200 text-slate-500 transition-all group-hover:border-slate-950 group-hover:bg-slate-950 group-hover:text-white"
+                                        :aria-label="`View ${venue.name}`"
+                                    >
+                                        <ArrowUpRight class="h-4 w-4" />
+                                    </NuxtLink>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+
+                    <!-- Empty -->
+                    <div
+                        v-else
+                        class="border border-slate-200 px-6 py-20 text-center"
+                    >
+                        <div
+                            class="mx-auto flex h-12 w-12 items-center justify-center border border-slate-200"
+                        >
+                            <Search class="h-5 w-5 text-slate-400" />
+                        </div>
+
+                        <h2
+                            class="mt-6 text-lg font-semibold tracking-tight text-slate-950"
+                        >
+                            No businesses found
+                        </h2>
+
+                        <p
+                            class="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500"
+                        >
+                            Try another service, business name, location, or
+                            rating.
+                        </p>
+
+                        <NuxtLink
+                            :to="NAVIGATION_PATHS.SEARCH"
+                            class="mt-6 inline-flex border-b border-slate-950 pb-1 text-sm font-semibold text-slate-950 transition-colors hover:border-primary hover:text-primary"
+                        >
+                            Clear search
+                        </NuxtLink>
+                    </div>
+                </section>
+
+                <!-- Desktop Map -->
+                <aside class="hidden xl:block">
+                    <div
+                        class="sticky top-36 h-[calc(100vh-180px)] overflow-hidden border border-slate-200"
+                    >
+                        <LocationMap :points="mapPoints" />
+                    </div>
+                </aside>
             </div>
-            <h3 class="text-2xl font-bold text-slate-950 mb-4">No venues found</h3>
-            <p class="text-slate-500 max-w-sm mx-auto mb-10">Try adjusting your search terms or filters to find what you're looking for.</p>
-            <NuxtLink :to="NAVIGATION_PATHS.SEARCH" class="text-sm font-bold text-primary border-b-2 border-primary pb-1 hover:text-slate-950 hover:border-slate-950 transition-colors">
-                Clear all filters
-            </NuxtLink>
-          </div>
         </div>
-      </div>
-    </div>
-  </main>
-  <Footer />
+
+        <!-- Mobile Map -->
+        <Teleport to="body">
+            <Transition
+                enter-active-class="transition duration-200 ease-out"
+                enter-from-class="opacity-0"
+                enter-to-class="opacity-100"
+                leave-active-class="transition duration-150 ease-in"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+            >
+                <div v-if="showMapMobile" class="fixed inset-0 z-[70] bg-white">
+                    <div class="relative h-full w-full">
+                        <button
+                            type="button"
+                            class="absolute right-4 top-4 z-[80] flex h-10 w-10 items-center justify-center border border-slate-200 bg-white shadow-sm"
+                            aria-label="Close map"
+                            @click="showMapMobile = false"
+                        >
+                            <X class="h-5 w-5" />
+                        </button>
+
+                        <LocationMap :points="mapPoints" />
+                    </div>
+                </div>
+            </Transition>
+        </Teleport>
+    </main>
+
+    <Footer />
 </template>

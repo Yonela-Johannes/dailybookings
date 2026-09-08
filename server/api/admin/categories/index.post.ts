@@ -5,9 +5,9 @@ import { z } from 'zod'
 const createCategorySchema = z.object({
   name: z.string().min(2).max(50),
   slug: z.string().min(2).max(50).regex(/^[a-z0-9-]+$/, 'Slug must be alphanumeric with hyphens'),
-  description: z.string().optional().nullable(),
-  imageUrl: z.string().url().optional().nullable(),
-  icon: z.string().optional().nullable(),
+  description: z.string().optional().nullable().transform(v => !v || v === '' ? null : v),
+  imageUrl: z.string().optional().nullable().transform(v => !v || v === '' ? null : v),
+  icon: z.string().optional().nullable().transform(v => !v || v === '' ? null : v),
   status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE')
 })
 

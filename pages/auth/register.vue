@@ -13,6 +13,7 @@ import {
 } from "lucide-vue-next";
 
 const { register } = useAuth();
+const route = useRoute();
 
 const firstName = ref("");
 const lastName = ref("");
@@ -24,6 +25,13 @@ const loading = ref(false);
 const error = ref("");
 const showPassword = ref(false);
 const showConfirmPassword = ref(false);
+
+const selectedRole = ref(route.query.role as string || "CUSTOMER");
+
+const role = computed(() => {
+    if (selectedRole.value === "BUSINESS_OWNER") return "BUSINESS_OWNER";
+    return "CUSTOMER";
+});
 
 const passwordRequirements = computed(() => [
     {
@@ -66,6 +74,7 @@ async function handleRegister() {
                 last_name: lastName.value.trim(),
                 full_name:
                     `${firstName.value.trim()} ${lastName.value.trim()}`.trim(),
+                role: role.value,
             },
         },
     });
@@ -157,6 +166,38 @@ async function handleRegister() {
                                     placeholder="Johannes"
                                     class="h-12 w-full border border-slate-200 bg-white px-4 text-sm outline-none transition-colors placeholder:text-slate-400 focus:border-slate-950 focus:ring-1 focus:ring-slate-950"
                                 />
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium text-slate-900">
+                                I want to:
+                            </label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button
+                                    type="button"
+                                    @click="selectedRole = 'CUSTOMER'"
+                                    :class="[
+                                        'h-12 border text-sm font-medium transition-all',
+                                        selectedRole === 'CUSTOMER'
+                                            ? 'border-slate-950 bg-slate-950 text-white'
+                                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                                    ]"
+                                >
+                                    Book Services
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="selectedRole = 'BUSINESS_OWNER'"
+                                    :class="[
+                                        'h-12 border text-sm font-medium transition-all',
+                                        selectedRole === 'BUSINESS_OWNER'
+                                            ? 'border-slate-950 bg-slate-950 text-white'
+                                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                                    ]"
+                                >
+                                    List my Business
+                                </button>
                             </div>
                         </div>
 

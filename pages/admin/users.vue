@@ -1,197 +1,606 @@
 <script setup lang="ts">
 import {
-  Search,
-  UserPlus,
-  MoreVertical,
-  Mail,
-  Calendar,
-  Shield,
-  Ban,
-  Filter,
-  Loader2
-} from 'lucide-vue-next'
+    Search,
+    UserPlus,
+    MoreVertical,
+    Mail,
+    Calendar,
+    Shield,
+    Filter,
+    Loader2,
+    ChevronLeft,
+    ChevronRight,
+    Trash2,
+    Users,
+} from "lucide-vue-next";
+import { format, parseISO } from "date-fns";
 
 definePageMeta({
-  layout: 'admin',
-  middleware: 'auth'
-})
+    layout: "admin",
+    middleware: "auth",
+});
 
-const search = ref('')
-const roleFilter = ref('')
-const page = ref(1)
+const search = ref("");
+const roleFilter = ref("");
+const page = ref(1);
 
-const { data: usersData, pending, refresh } = useFetch('/api/admin/users', {
-  query: {
-    search,
-    role: roleFilter,
-    page,
-    limit: 10
-  },
-  watch: [search, roleFilter, page]
-})
+const {
+    data: usersData,
+    pending,
+    refresh,
+} = useFetch("/api/admin/users", {
+    query: {
+        search,
+        role: roleFilter,
+        page,
+        limit: 10,
+    },
+    watch: [search, roleFilter, page],
+});
 
-const users = computed(() => usersData.value?.users || [])
-const meta = computed(() => usersData.value?.meta || { total: 0, page: 1, totalPages: 1 })
+const users = computed(() => usersData.value?.users || []);
+
+const meta = computed(
+    () =>
+        usersData.value?.meta || {
+            total: 0,
+            page: 1,
+            totalPages: 1,
+        },
+);
+
+const isSlideoverOpen = ref(false);
+const isSaving = ref(false);
+const newUser = ref({
+    email: "",
+    fullName: "",
+    password: "",
+    role: "CUSTOMER",
+});
+
+const openAddUser = () => {
+    newUser.value = {
+        email: "",
+        fullName: "",
+        password: "",
+        role: "CUSTOMER",
+    };
+    isSlideoverOpen.value = true;
+};
+
+const handleCreateUser = async () => {
+    isSaving.value = true;
+    try {
+        await $fetch("/api/admin/users", {
+            method: "POST",
+            body: newUser.value,
+        });
+        await refresh();
+        isSlideoverOpen.value = false;
+    } catch (error: any) {
+        alert(error.data?.statusMessage || "Failed to create user");
+    } finally {
+        isSaving.value = false;
+    }
+};
 
 const getRoleBadge = (role: string) => {
-  switch (role) {
-    case 'PLATFORM_ADMIN': return 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-    case 'BUSINESS_OWNER': return 'bg-teal-500/10 text-teal-400 border-teal-500/20'
-    case 'CUSTOMER': return 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-    default: return 'bg-slate-800 text-slate-400 border-slate-700'
-  }
-}
+    switch (role) {
+        case "PLATFORM_ADMIN":
+            return "bg-purple-50 text-purple-700 border-purple-200";
+
+        case "BUSINESS_OWNER":
+            return "bg-teal-50 text-teal-700 border-teal-200";
+
+        case "CUSTOMER":
+            return "bg-blue-50 text-blue-700 border-blue-200";
+
+        default:
+            return "bg-slate-50 text-slate-600 border-slate-200";
+    }
+};
 
 const updateRole = async (userId: string, role: string) => {
-  try {
-    await $fetch(`/api/admin/users/${userId}`, {
-      method: 'PATCH',
-      body: { role }
-    })
-    refresh()
-  } catch (error) {
-    console.error('Failed to update user role:', error)
-  }
-}
+    try {
+        await $fetch(`/api/admin/users/${userId}`, {
+            method: "PATCH",
+            body: { role },
+        });
+
+        refresh();
+    } catch (error) {
+        console.error("Failed to update user role:", error);
+    }
+};
+
+const handleDelete = async (id: string) => {
+    if (
+        !confirm(
+            "Are you sure you want to delete this account? All associated businesses and data will be permanently removed.",
+        )
+    ) {
+        return;
+    }
+
+    try {
+        await $fetch(`/api/admin/users/${id}`, {
+            method: "DELETE",
+        });
+
+        refresh();
+    } catch (error: any) {
+        alert(error.data?.statusMessage || "Failed to delete user");
+    }
+};
 </script>
 
 <template>
-  <div class="space-y-8">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-3xl font-extrabold text-white">User Management</h1>
-        <p class="text-slate-500">Manage platform users, roles, and permissions.</p>
-      </div>
-      <UiButton label="Add Platform Admin" :icon="UserPlus" class="!bg-teal-500 !text-slate-950 hover:!bg-teal-400" />
-    </div>
+    <div class="space-y-8 pb-20">
+        <!-- Page Header -->
+        <Head
+            title="Users"
+            description="Manage customers, business owners and platform administrators"
+        />
 
-    <!-- Table Container -->
-    <div class="bg-slate-950/50 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
-      <div class="p-4 border-b border-slate-800 bg-slate-900/50 flex flex-col sm:flex-row items-center gap-4">
-        <div class="relative flex-1 w-full">
-          <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-          <input
-            v-model="search"
-            type="text"
-            placeholder="Search by name or email..."
-            class="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:ring-2 focus:ring-teal-500/20 outline-none"
-          />
-        </div>
-        <div class="flex items-center gap-2 w-full sm:w-auto">
-          <select v-model="roleFilter" class="bg-slate-900 border border-slate-800 text-slate-400 text-xs font-bold px-4 py-2 rounded-xl focus:ring-2 focus:ring-teal-500/20 outline-none flex-1 sm:flex-none">
-            <option value="">All Roles</option>
-            <option value="PLATFORM_ADMIN">Admins</option>
-            <option value="BUSINESS_OWNER">Business Owners</option>
-            <option value="CUSTOMER">Customers</option>
-          </select>
-          <button @click="refresh" class="p-2 bg-slate-800 border border-slate-700 rounded-xl text-slate-400 hover:text-white transition-colors">
-            <Filter class="w-5 h-5" />
-          </button>
-        </div>
-      </div>
+        <!-- Actions -->
+        <div
+            class="flex flex-col gap-4 border-b border-slate-200 pb-6 sm:flex-row sm:items-center sm:justify-between"
+        >
+            <div class="flex items-center gap-3">
+                <div
+                    class="border border-slate-200 bg-white px-4 py-2.5 text-[11px] font-semibold text-slate-600"
+                >
+                    {{ meta.total }} users
+                </div>
 
-      <div class="overflow-x-auto min-h-[400px]">
-        <div v-if="pending" class="flex items-center justify-center py-20">
-          <Loader2 class="w-8 h-8 text-teal-500 animate-spin" />
+                <div
+                    class="hidden border border-slate-200 bg-white px-4 py-2.5 text-[11px] font-medium text-slate-400 sm:block"
+                >
+                    Page {{ meta.page }} of {{ meta.totalPages }}
+                </div>
+            </div>
+
+            <UiButton
+                label="Add user"
+                :icon="UserPlus"
+                class="h-10 shadow-none"
+                variant="outline"
+                @click="openAddUser"
+            />
         </div>
-        <table v-else class="w-full text-left border-collapse">
-          <thead>
-            <tr class="border-b border-slate-800 bg-slate-950">
-              <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">User</th>
-              <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Role</th>
-              <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Joined Date</th>
-              <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Activity</th>
-              <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-800">
-            <tr v-for="user in users" :key="user.id" class="hover:bg-slate-900/50 transition-colors group">
-              <td class="px-6 py-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-teal-500 font-bold overflow-hidden">
-                    <img v-if="user.profile?.avatarUrl" :src="user.profile.avatarUrl" class="w-full h-full object-cover" />
-                    <template v-else>{{ user.fullName?.charAt(0) || user.email.charAt(0) }}</template>
-                  </div>
-                  <div>
-                    <div class="font-bold text-white">{{ user.fullName || 'No Name' }}</div>
-                    <div class="text-xs text-slate-500 flex items-center gap-1">
-                      <Mail class="w-3 h-3" />
-                      {{ user.email }}
+
+        <!-- Users Table -->
+        <div class="overflow-hidden border border-slate-200 bg-white shadow-sm">
+            <!-- Filters -->
+            <div
+                class="flex flex-col gap-4 border-b border-slate-200 bg-slate-50/40 p-5 lg:flex-row lg:items-end"
+            >
+                <div class="w-full max-w-xl">
+                    <label
+                        for="user-search"
+                        class="mb-2 block text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400"
+                    >
+                        Search users
+                    </label>
+
+                    <div class="relative">
+                        <Search
+                            class="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                        />
+
+                        <input
+                            id="user-search"
+                            v-model="search"
+                            type="text"
+                            placeholder="Search by name or email..."
+                            class="h-10 w-full border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-400"
+                        />
                     </div>
-                  </div>
                 </div>
-              </td>
-              <td class="px-6 py-4">
-                <span :class="['px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest rounded-full border', getRoleBadge(user.role)]">
-                  {{ user.role?.replace('_', ' ') }}
-                </span>
-              </td>
-              <td class="px-6 py-4">
-                <div class="text-sm font-medium text-slate-300 flex items-center gap-2">
-                  <Calendar class="w-3.5 h-3.5 text-slate-600" />
-                  {{ new Date(user.createdAt).toLocaleDateString() }}
-                </div>
-              </td>
-              <td class="px-6 py-4 text-right">
-                <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  {{ user._count?.bookings }} Bookings
-                </div>
-                <div class="text-[10px] font-bold text-slate-600">
-                  {{ user._count?.businesses }} Businesses
-                </div>
-              </td>
-              <td class="px-6 py-4 text-right">
-                <div class="flex items-center justify-end gap-2">
-                  <div class="relative group/menu">
-                    <button class="p-2 text-slate-500 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
-                      <Shield class="w-5 h-5" />
+
+                <div class="flex gap-3">
+                    <div class="flex-1 lg:w-56 lg:flex-none">
+                        <label
+                            for="role-filter"
+                            class="mb-2 block text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400"
+                        >
+                            Role
+                        </label>
+
+                        <select
+                            id="role-filter"
+                            v-model="roleFilter"
+                            class="h-10 w-full border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition-colors focus:border-slate-400"
+                        >
+                            <option value="">All roles</option>
+                            <option value="PLATFORM_ADMIN">
+                                Platform admin
+                            </option>
+                            <option value="BUSINESS_OWNER">
+                                Business owner
+                            </option>
+                            <option value="CUSTOMER">Customer</option>
+                        </select>
+                    </div>
+
+                    <button
+                        type="button"
+                        @click="refresh"
+                        class="mt-auto inline-flex h-10 w-10 shrink-0 items-center justify-center border border-slate-200 bg-white text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                        aria-label="Refresh users"
+                    >
+                        <Filter class="h-4 w-4" />
                     </button>
-                    <!-- Simple Role Dropdown on Hover for demo, could be a real menu -->
-                    <div class="absolute right-0 bottom-full mb-2 w-48 bg-slate-900 border border-slate-800 rounded-xl shadow-xl hidden group-hover/menu:block z-10 p-2">
-                      <button @click="updateRole(user.id, 'CUSTOMER')" class="w-full text-left px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg">Make Customer</button>
-                      <button @click="updateRole(user.id, 'BUSINESS_OWNER')" class="w-full text-left px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg">Make Business Owner</button>
-                      <button @click="updateRole(user.id, 'PLATFORM_ADMIN')" class="w-full text-left px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg">Make Admin</button>
-                    </div>
-                  </div>
-                  <button class="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors" title="Ban User">
-                    <Ban class="w-5 h-5" />
-                  </button>
-                  <button class="p-2 text-slate-500 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
-                    <MoreVertical class="w-5 h-5" />
-                  </button>
                 </div>
-              </td>
-            </tr>
-            <tr v-if="users.length === 0 && !pending">
-              <td colspan="5" class="px-6 py-20 text-center text-slate-500">
-                No users found matching your search.
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+            </div>
 
-      <div class="p-6 bg-slate-950 border-t border-slate-800 flex items-center justify-between">
-        <div class="text-xs font-bold text-slate-500 uppercase tracking-widest">
-          Showing {{ users.length }} of {{ meta.total }} users
+            <!-- Loading -->
+            <div
+                v-if="pending"
+                class="flex min-h-[520px] items-center justify-center"
+            >
+                <Loader2 class="h-6 w-6 animate-spin text-slate-400" />
+            </div>
+
+            <!-- Table -->
+            <div v-else-if="users.length" class="overflow-x-auto">
+                <table class="w-full min-w-[1000px] text-left">
+                    <thead>
+                        <tr class="border-b border-slate-200 bg-slate-50/60">
+                            <th
+                                class="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                            >
+                                User
+                            </th>
+
+                            <th
+                                class="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                            >
+                                Role
+                            </th>
+
+                            <th
+                                class="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                            >
+                                Joined
+                            </th>
+
+                            <th
+                                class="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                            >
+                                Activity
+                            </th>
+
+                            <th
+                                class="px-6 py-4 text-right text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                            >
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody class="divide-y divide-slate-100">
+                        <tr
+                            v-for="user in users"
+                            :key="user.id"
+                            class="group transition-colors hover:bg-slate-50/60"
+                        >
+                            <!-- User -->
+                            <td class="px-6 py-5">
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden border border-slate-200 bg-slate-50 text-sm font-bold text-slate-600"
+                                    >
+                                        <img
+                                            v-if="user.profile?.avatarUrl"
+                                            :src="user.profile.avatarUrl"
+                                            :alt="user.fullName || 'User'"
+                                            class="h-full w-full object-cover"
+                                        />
+
+                                        <template v-else>
+                                            {{
+                                                user.fullName?.charAt(0) ||
+                                                user.email
+                                                    ?.charAt(0)
+                                                    ?.toUpperCase()
+                                            }}
+                                        </template>
+                                    </div>
+
+                                    <div class="min-w-0">
+                                        <div
+                                            class="max-w-[260px] truncate text-sm font-semibold text-slate-900"
+                                        >
+                                            {{
+                                                user.fullName || "Unnamed user"
+                                            }}
+                                        </div>
+
+                                        <div
+                                            class="mt-1 flex max-w-[260px] items-center gap-1.5 truncate text-xs text-slate-400"
+                                        >
+                                            <Mail
+                                                class="h-3.5 w-3.5 shrink-0"
+                                            />
+                                            {{ user.email }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Role -->
+                            <td class="px-6 py-5">
+                                <span
+                                    :class="[
+                                        'inline-flex border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide',
+                                        getRoleBadge(user.role),
+                                    ]"
+                                >
+                                    {{
+                                        user.role
+                                            ?.replace(/_/g, " ")
+                                            .toLowerCase()
+                                    }}
+                                </span>
+                            </td>
+
+                            <!-- Joined -->
+                            <td class="px-6 py-5">
+                                <div
+                                    class="flex items-center gap-2 text-sm font-medium text-slate-700"
+                                >
+                                    <Calendar class="h-4 w-4 text-slate-400" />
+
+                                    {{
+                                        format(
+                                            parseISO(user.createdAt),
+                                            "MMM d, yyyy",
+                                        )
+                                    }}
+                                </div>
+                            </td>
+
+                            <!-- Activity -->
+                            <td class="px-6 py-5">
+                                <div
+                                    class="text-sm font-semibold text-slate-900"
+                                >
+                                    {{ user._count?.bookings || 0 }}
+                                    <span class="font-normal text-slate-400">
+                                        bookings
+                                    </span>
+                                </div>
+
+                                <div class="mt-1 text-xs text-slate-400">
+                                    {{ user._count?.businesses || 0 }}
+                                    {{
+                                        user._count?.businesses === 1
+                                            ? "business"
+                                            : "businesses"
+                                    }}
+                                </div>
+                            </td>
+
+                            <!-- Actions -->
+                            <td class="px-6 py-5">
+                                <div
+                                    class="flex items-center justify-end gap-2"
+                                >
+                                    <div class="relative group/menu">
+                                        <button
+                                            type="button"
+                                            class="inline-flex h-9 w-9 items-center justify-center border border-slate-200 bg-white text-slate-400 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+                                            aria-label="Change user role"
+                                        >
+                                            <Shield class="h-4 w-4" />
+                                        </button>
+
+                                        <div
+                                            class="absolute right-0 bottom-full z-50 mb-2 hidden w-52 border border-slate-200 bg-white p-2 shadow-xl group-hover/menu:block"
+                                        >
+                                            <div
+                                                class="px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                                            >
+                                                Change role
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                @click="
+                                                    updateRole(
+                                                        user.id,
+                                                        'CUSTOMER',
+                                                    )
+                                                "
+                                                class="block w-full px-3 py-2.5 text-left text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                                            >
+                                                Customer
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                @click="
+                                                    updateRole(
+                                                        user.id,
+                                                        'BUSINESS_OWNER',
+                                                    )
+                                                "
+                                                class="block w-full px-3 py-2.5 text-left text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-teal-700"
+                                            >
+                                                Business owner
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                @click="
+                                                    updateRole(
+                                                        user.id,
+                                                        'PLATFORM_ADMIN',
+                                                    )
+                                                "
+                                                class="block w-full px-3 py-2.5 text-left text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-purple-700"
+                                            >
+                                                Platform admin
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        @click="handleDelete(user.id)"
+                                        class="inline-flex h-9 w-9 items-center justify-center border border-slate-200 bg-white text-slate-400 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                                        title="Delete account"
+                                        aria-label="Delete account"
+                                    >
+                                        <Trash2 class="h-4 w-4" />
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        class="inline-flex h-9 w-9 items-center justify-center border border-slate-800 bg-slate-900 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+                                        aria-label="More actions"
+                                    >
+                                        <MoreVertical class="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty -->
+            <div
+                v-else
+                class="flex min-h-[520px] flex-col items-center justify-center px-6 text-center"
+            >
+                <div
+                    class="mb-5 flex h-14 w-14 items-center justify-center border border-slate-200 bg-slate-50"
+                >
+                    <Users class="h-6 w-6 text-slate-300" />
+                </div>
+
+                <h3 class="text-base font-semibold text-slate-900">
+                    No users found
+                </h3>
+
+                <p class="mt-1 max-w-sm text-sm text-slate-400">
+                    Try adjusting your search or role filter.
+                </p>
+            </div>
+
+            <!-- Pagination -->
+            <div
+                class="flex flex-col gap-4 border-t border-slate-200 bg-slate-50/40 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+                <p class="text-xs text-slate-400">
+                    Showing page
+                    <span class="font-semibold text-slate-600">
+                        {{ meta.page }}
+                    </span>
+                    of
+                    <span class="font-semibold text-slate-600">
+                        {{ meta.totalPages }}
+                    </span>
+                    · {{ meta.total }} total
+                </p>
+
+                <div class="flex items-center gap-2">
+                    <button
+                        type="button"
+                        :disabled="page === 1"
+                        @click="page--"
+                        class="inline-flex h-9 w-9 items-center justify-center border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+                        aria-label="Previous page"
+                    >
+                        <ChevronLeft class="h-4 w-4" />
+                    </button>
+
+                    <button
+                        type="button"
+                        :disabled="page >= meta.totalPages"
+                        @click="page++"
+                        class="inline-flex h-9 w-9 items-center justify-center border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+                        aria-label="Next page"
+                    >
+                        <ChevronRight class="h-4 w-4" />
+                    </button>
+                </div>
+            </div>
         </div>
-        <div class="flex items-center gap-2">
-          <button
-            :disabled="page === 1"
-            @click="page--"
-            class="px-4 py-2 bg-slate-900 border border-slate-800 text-slate-500 font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-800 transition-colors"
-          >
-            Previous
-          </button>
-          <button
-            :disabled="page >= meta.totalPages"
-            @click="page++"
-            class="px-4 py-2 bg-slate-900 border border-slate-800 text-white font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-800 transition-colors"
-          >
-            Next
-          </button>
-        </div>
-      </div>
+
+        <!-- Add User Slideover -->
+        <UiSlideover
+            :show="isSlideoverOpen"
+            title="Add New User"
+            @close="isSlideoverOpen = false"
+        >
+            <form id="add-user-form" class="space-y-6" @submit.prevent="handleCreateUser">
+                <div class="space-y-1.5">
+                    <label class="text-xs font-semibold text-slate-700">Full Name</label>
+                    <input
+                        v-model="newUser.fullName"
+                        type="text"
+                        required
+                        placeholder="e.g. John Doe"
+                        class="h-10 w-full border border-slate-200 px-3 text-sm outline-none focus:border-primary"
+                    />
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-xs font-semibold text-slate-700">Email Address</label>
+                    <input
+                        v-model="newUser.email"
+                        type="email"
+                        required
+                        placeholder="john@example.com"
+                        class="h-10 w-full border border-slate-200 px-3 text-sm outline-none focus:border-primary"
+                    />
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-xs font-semibold text-slate-700">Password</label>
+                    <input
+                        v-model="newUser.password"
+                        type="password"
+                        required
+                        minlength="8"
+                        class="h-10 w-full border border-slate-200 px-3 text-sm outline-none focus:border-primary"
+                    />
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-xs font-semibold text-slate-700">Role</label>
+                    <select
+                        v-model="newUser.role"
+                        required
+                        class="h-10 w-full border border-slate-200 bg-white px-3 text-sm outline-none focus:border-primary"
+                    >
+                        <option value="CUSTOMER">Customer</option>
+                        <option value="BUSINESS_OWNER">Business Owner</option>
+                        <option value="PLATFORM_ADMIN">Platform Admin</option>
+                    </select>
+                </div>
+            </form>
+
+            <template #footer>
+                <div class="flex gap-3">
+                    <UiButton
+                        label="Cancel"
+                        variant="outline"
+                        class="flex-1"
+                        @click="isSlideoverOpen = false"
+                    />
+                    <UiButton
+                        label="Create User"
+                        button-type="submit"
+                        form="add-user-form"
+                        class="flex-[2]"
+                        :loading="isSaving"
+                    />
+                </div>
+            </template>
+        </UiSlideover>
     </div>
-  </div>
 </template>

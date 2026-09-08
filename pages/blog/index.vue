@@ -18,13 +18,13 @@ const route = useRoute();
 const category = computed(() => route.query.category as string);
 
 const {
-    data: articles,
+    data: blogRes,
     refresh,
     pending,
 } = useAsyncData(
     "articles",
     () =>
-        $fetch("/api/blog", {
+        $fetch<any>("/api/blog", {
             params: {
                 category: category.value,
             },
@@ -33,6 +33,8 @@ const {
         watch: [category],
     },
 );
+
+const articles = computed(() => blogRes.value?.data || []);
 
 function formatDate(date: string) {
     return new Date(date).toLocaleDateString("en-ZA", {

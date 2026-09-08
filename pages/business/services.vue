@@ -1,424 +1,689 @@
 <script setup lang="ts">
 import {
-  Plus,
-  Search,
-  MoreVertical,
-  Scissors,
-  Clock,
-  DollarSign,
-  ChevronRight,
-  GripVertical,
-  Edit2,
-  Trash2,
-  Loader2,
-  X,
-  AlertCircle
-} from 'lucide-vue-next'
-import { z } from 'zod'
+    Plus,
+    Scissors,
+    Clock,
+    ChevronRight,
+    Edit2,
+    Trash2,
+    AlertCircle,
+    Layers,
+    ChevronDown,
+} from "lucide-vue-next";
+import { z } from "zod";
 
 definePageMeta({
-  layout: 'business',
-  middleware: 'auth'
-})
+    layout: "business",
+    middleware: "auth",
+});
 
-// Validation Schemas
 const categorySchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters")
-})
+    name: z.string().min(2, "Name must be at least 2 characters"),
+});
 
 const serviceSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  description: z.string().optional(),
-  durationMinutes: z.number().int().min(1, "Duration must be at least 1 minute"),
-  price: z.number().min(0, "Price cannot be negative"),
-  serviceCategoryId: z.string().uuid("Please select a category")
-})
+    name: z.string().min(2, "Name must be at least 2 characters"),
+    description: z.string().optional(),
+    durationMinutes: z
+        .number()
+        .int()
+        .min(1, "Duration must be at least 1 minute"),
+    price: z.number().min(0, "Price cannot be negative"),
+    serviceCategoryId: z.string().uuid("Please select a category"),
+});
 
-// Data Fetching
-const { data: venuesRes } = await useFetch('/api/business/venues')
-const venues = computed(() => venuesRes.value?.data || [])
-const selectedVenueId = ref(venues.value[0]?.id || '')
+const { data: venuesRes } = await useFetch("/api/business/venues");
 
-const { data: categoriesRes, pending, refresh } = await useFetch('/api/business/services', {
-  query: { venueId: selectedVenueId },
-  watch: [selectedVenueId]
-})
+const venues = computed(() => venuesRes.value?.data || []);
 
-const categories = computed(() => categoriesRes.value?.data || [])
+const selectedVenueId = ref(venues.value[0]?.id || "");
 
-// UI State
-const showSlideOver = ref(false)
-const slideOverType = ref<'category' | 'service'>('category')
-const slideOverMode = ref<'add' | 'edit'>('add')
-const selectedItem = ref<any>(null)
-const isSubmitting = ref(false)
-const errors = ref<Record<string, string>>({})
+const {
+    data: categoriesRes,
+    pending,
+    refresh,
+} = await useFetch("/api/business/services", {
+    query: {
+        venueId: selectedVenueId,
+    },
+    watch: [selectedVenueId],
+});
 
-// Form Data
+const categories = computed(() => categoriesRes.value?.data || []);
+
+const showSlideOver = ref(false);
+const slideOverType = ref<"category" | "service">("category");
+const slideOverMode = ref<"add" | "edit">("add");
+const selectedItem = ref<any>(null);
+const isSubmitting = ref(false);
+const errors = ref<Record<string, string>>({});
+
 const categoryForm = reactive({
-  name: ''
-})
+    name: "",
+});
 
 const serviceForm = reactive({
-  name: '',
-  description: '',
-  durationMinutes: 30,
-  price: 0,
-  serviceCategoryId: ''
-})
+    name: "",
+    description: "",
+    durationMinutes: 30,
+    price: 0,
+    serviceCategoryId: "",
+});
 
-// Actions
 const openCategoryForm = (category?: any) => {
-  slideOverType.value = 'category'
-  slideOverMode.value = category ? 'edit' : 'add'
-  selectedItem.value = category || null
-  categoryForm.name = category?.name || ''
-  errors.value = {}
-  showSlideOver.value = true
-}
+    slideOverType.value = "category";
+    slideOverMode.value = category ? "edit" : "add";
+    selectedItem.value = category || null;
+
+    categoryForm.name = category?.name || "";
+    errors.value = {};
+
+    showSlideOver.value = true;
+};
 
 const openServiceForm = (service?: any, categoryId?: string) => {
-  slideOverType.value = 'service'
-  slideOverMode.value = service ? 'edit' : 'add'
-  selectedItem.value = service || null
-  serviceForm.name = service?.name || ''
-  serviceForm.description = service?.description || ''
-  serviceForm.durationMinutes = service?.durationMinutes || 30
-  serviceForm.price = service ? Number(service.price) : 0
-  serviceForm.serviceCategoryId = service?.serviceCategoryId || categoryId || (categories.value[0]?.id || '')
-  errors.value = {}
-  showSlideOver.value = true
-}
+    slideOverType.value = "service";
+    slideOverMode.value = service ? "edit" : "add";
+    selectedItem.value = service || null;
+
+    serviceForm.name = service?.name || "";
+    serviceForm.description = service?.description || "";
+    serviceForm.durationMinutes = service?.durationMinutes || 30;
+    serviceForm.price = service ? Number(service.price) : 0;
+    serviceForm.serviceCategoryId =
+        service?.serviceCategoryId ||
+        categoryId ||
+        categories.value[0]?.id ||
+        "";
+
+    errors.value = {};
+    showSlideOver.value = true;
+};
 
 const handleSubmit = async () => {
-  errors.value = {}
-  isSubmitting.value = true
+    errors.value = {};
+    isSubmitting.value = true;
 
-  try {
-    if (slideOverType.value === 'category') {
-      const result = categorySchema.safeParse(categoryForm)
-      if (!result.success) {
-        result.error.issues.forEach(issue => {
-          errors.value[issue.path[0]] = issue.message
-        })
-        return
-      }
+    try {
+        if (slideOverType.value === "category") {
+            const result = categorySchema.safeParse(categoryForm);
 
-      await $fetch('/api/business/services', {
-        method: 'POST',
-        body: {
-          action: slideOverMode.value === 'add' ? 'createCategory' : 'updateCategory',
-          id: selectedItem.value?.id,
-          data: {
-            ...categoryForm,
-            venueId: selectedVenueId.value
-          }
+            if (!result.success) {
+                result.error.issues.forEach((issue) => {
+                    errors.value[String(issue.path[0])] = issue.message;
+                });
+
+                return;
+            }
+
+            await $fetch("/api/business/services", {
+                method: "POST",
+                body: {
+                    action:
+                        slideOverMode.value === "add"
+                            ? "createCategory"
+                            : "updateCategory",
+                    id: selectedItem.value?.id,
+                    data: {
+                        ...categoryForm,
+                        venueId: selectedVenueId.value,
+                    },
+                },
+            });
+        } else {
+            const result = serviceSchema.safeParse(serviceForm);
+
+            if (!result.success) {
+                result.error.issues.forEach((issue) => {
+                    errors.value[String(issue.path[0])] = issue.message;
+                });
+
+                return;
+            }
+
+            await $fetch("/api/business/services", {
+                method: "POST",
+                body: {
+                    action:
+                        slideOverMode.value === "add"
+                            ? "createService"
+                            : "updateService",
+                    id: selectedItem.value?.id,
+                    data: serviceForm,
+                },
+            });
         }
-      })
-    } else {
-      const result = serviceSchema.safeParse(serviceForm)
-      if (!result.success) {
-        result.error.issues.forEach(issue => {
-          errors.value[issue.path[0]] = issue.message
-        })
-        return
-      }
 
-      await $fetch('/api/business/services', {
-        method: 'POST',
-        body: {
-          action: slideOverMode.value === 'add' ? 'createService' : 'updateService',
-          id: selectedItem.value?.id,
-          data: serviceForm
-        }
-      })
+        await refresh();
+        showSlideOver.value = false;
+    } catch (err: any) {
+        console.error(err);
+
+        alert(err.data?.message || err.message || "Operation failed");
+    } finally {
+        isSubmitting.value = false;
+    }
+};
+
+const handleDelete = async (type: "category" | "service", id: string) => {
+    if (!confirm(`Are you sure you want to delete this ${type}?`)) {
+        return;
     }
 
-    await refresh()
-    showSlideOver.value = false
-  } catch (err: any) {
-    console.error(err)
-    alert(err.data?.message || err.message || 'Operation failed')
-  } finally {
-    isSubmitting.value = false
-  }
-}
+    try {
+        await $fetch("/api/business/services", {
+            method: "POST",
+            body: {
+                action:
+                    type === "category" ? "deleteCategory" : "deleteService",
+                id,
+            },
+        });
 
-const handleDelete = async (type: 'category' | 'service', id: string) => {
-  if (!confirm(`Are you sure you want to delete this ${type}?`)) return
-
-  try {
-    await $fetch('/api/business/services', {
-      method: 'POST',
-      body: {
-        action: type === 'category' ? 'deleteCategory' : 'deleteService',
-        id
-      }
-    })
-    await refresh()
-  } catch (err: any) {
-    alert(err.message)
-  }
-}
+        await refresh();
+    } catch (err: any) {
+        alert(err.message);
+    }
+};
 </script>
 
 <template>
-  <div class="space-y-8 pb-20">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
-      <div>
-        <h1 class="text-4xl font-black text-slate-900 italic tracking-tighter">Services</h1>
-        <p class="text-slate-500 font-medium">Create and manage your service menu and pricing.</p>
-      </div>
-      <div class="flex items-center gap-3">
-        <select
-          v-if="venues.length > 1"
-          v-model="selectedVenueId"
-          class="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+    <div class="space-y-8 pb-12">
+        <div
+            class="flex flex-col gap-5 border-b border-slate-200 pb-7 md:flex-row md:items-end md:justify-between"
         >
-          <option v-for="venue in venues" :key="venue.id" :value="venue.id">{{ venue.name }}</option>
-        </select>
-        <UiButton label="Add Category" type="outline" :icon="Plus" @click="openCategoryForm()" />
-        <UiButton label="Add Service" :icon="Plus" @click="openServiceForm()" />
-      </div>
-    </div>
-
-    <!-- Main Content -->
-    <div v-if="pending" class="space-y-6">
-      <div v-for="i in 3" :key="i" class="bg-white rounded-3xl border border-slate-100 p-8 animate-pulse">
-        <div class="h-6 w-48 bg-slate-100 rounded-lg mb-6"></div>
-        <div class="space-y-4">
-          <div v-for="j in 2" :key="j" class="h-20 bg-slate-50 rounded-2xl"></div>
-        </div>
-      </div>
-    </div>
-
-    <div v-else-if="categories.length === 0" class="flex flex-col items-center justify-center py-20 px-6 bg-white rounded-3xl border border-slate-100 shadow-sm text-center">
-      <div class="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-300 mb-6">
-        <Scissors class="w-10 h-10" />
-      </div>
-      <h3 class="text-xl font-bold text-slate-900 mb-2 italic">No services yet</h3>
-      <p class="text-slate-500 max-w-xs mb-8 font-medium">Start by adding your first service category to build your menu.</p>
-      <UiButton label="Add First Category" :icon="Plus" @click="openCategoryForm()" />
-    </div>
-
-    <div v-else class="space-y-6">
-      <div v-for="category in categories" :key="category.id" class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden group/cat">
-        <!-- Category Header -->
-        <div class="px-8 py-6 bg-slate-50/30 border-b border-slate-50 flex items-center justify-between">
-          <div class="flex items-center gap-4">
-            <div class="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 group-hover/cat:text-teal-600 group-hover/cat:border-teal-100 transition-colors">
-              <GripVertical class="w-5 h-5 cursor-grab" />
-            </div>
             <div>
-              <h2 class="text-sm font-black text-slate-950 uppercase tracking-[0.2em]">{{ category.name }}</h2>
-              <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ category.services.length }} Services</span>
+                <div
+                    class="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400"
+                >
+                    Business Operations
+                </div>
+
+                <h1
+                    class="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl"
+                >
+                    Services
+                </h1>
+
+                <p class="mt-1.5 text-sm text-slate-500">
+                    Manage your services, pricing and service categories.
+                </p>
             </div>
-          </div>
-          <div class="flex items-center gap-2 opacity-0 group-hover/cat:opacity-100 transition-all duration-300 translate-x-4 group-hover/cat:translate-x-0">
-            <button
-              @click="openCategoryForm(category)"
-              class="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-primary hover:border-primary/30 transition-all shadow-sm"
-            >
-              <Edit2 class="w-4 h-4" />
-            </button>
-            <button
-              @click="handleDelete('category', category.id)"
-              class="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-red-500 hover:border-red-100 transition-all shadow-sm"
-            >
-              <Trash2 class="w-4 h-4" />
-            </button>
-          </div>
-        </div>
 
-        <!-- Services List -->
-        <div class="divide-y divide-slate-50">
-          <div v-for="service in category.services" :key="service.id" class="px-8 py-6 hover:bg-slate-50/50 transition-all group">
-            <div class="flex items-center gap-6">
-              <div class="hidden sm:block">
-                <GripVertical class="w-4 h-4 text-slate-200 cursor-grab" />
-              </div>
-
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-3 mb-1.5">
-                  <h3 class="font-bold text-slate-900 group-hover:text-teal-600 transition-colors">{{ service.name }}</h3>
-                  <div class="h-1 w-1 bg-slate-200 rounded-full"></div>
-                  <span class="text-xs font-black text-teal-600 bg-teal-50 px-3 py-1 rounded-full italic">${{ service.price }}</span>
-                </div>
-                <p class="text-sm text-slate-500 font-medium line-clamp-1">{{ service.description }}</p>
-              </div>
-
-              <div class="flex items-center gap-8">
-                <div class="flex flex-col items-end gap-1">
-                  <div class="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    <Clock class="w-3 h-3" />
-                    {{ service.durationMinutes }} min
-                  </div>
-                </div>
-
-                <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0">
-                  <button
-                    @click="openServiceForm(service)"
-                    class="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-primary hover:border-primary/30 transition-all shadow-sm"
-                  >
-                    <Edit2 class="w-4 h-4" />
-                  </button>
-                  <button
-                    @click="handleDelete('service', service.id)"
-                    class="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-all shadow-sm"
-                  >
-                    <MoreVertical class="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <button
-            @click="openServiceForm(null, category.id)"
-            class="w-full px-8 py-5 text-left text-[10px] font-black text-slate-400 hover:text-teal-600 hover:bg-teal-50/30 transition-all flex items-center gap-3 group/add uppercase tracking-[0.2em]"
-          >
-            <div class="w-6 h-6 rounded-lg bg-slate-50 group-hover/add:bg-teal-500/10 flex items-center justify-center transition-colors">
-              <Plus class="w-3.5 h-3.5 group-hover/add:scale-110 transition-transform" />
-            </div>
-            Add service to {{ category.name }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Slide-over (Forms) -->
-    <Teleport to="body">
-      <Transition
-        enter-active-class="transition duration-300 ease-out"
-        enter-from-class="opacity-0"
-        enter-to-class="opacity-100"
-        leave-active-class="transition duration-200 ease-in"
-        leave-from-class="opacity-100"
-        leave-to-class="opacity-0"
-      >
-        <div v-if="showSlideOver" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex justify-end">
-          <Transition
-            enter-active-class="transition duration-500 cubic-bezier(0.16, 1, 0.3, 1)"
-            enter-from-class="translate-x-full"
-            enter-to-class="translate-x-0"
-            leave-active-class="transition duration-300 cubic-bezier(0.7, 0, 0.84, 0)"
-            leave-from-class="translate-x-0"
-            leave-to-class="translate-x-full"
-            appear
-          >
-            <div class="w-full max-w-lg bg-white h-full shadow-2xl flex flex-col border-l border-slate-100">
-              <!-- Header -->
-              <div class="px-8 py-8 border-b border-slate-100 flex items-center justify-between">
-                <div>
-                  <h2 class="text-2xl font-black text-slate-900 italic tracking-tighter capitalize">
-                    {{ slideOverMode }} {{ slideOverType }}
-                  </h2>
-                  <p class="text-sm text-slate-500 font-medium mt-1">Fill in the details below.</p>
-                </div>
-                <button @click="showSlideOver = false" class="p-3 hover:bg-slate-50 rounded-2xl text-slate-400 hover:text-slate-600 transition-all">
-                  <X class="w-6 h-6" />
-                </button>
-              </div>
-
-              <!-- Form -->
-              <div class="flex-1 overflow-y-auto px-8 py-10 space-y-8">
-                <template v-if="slideOverType === 'category'">
-                  <div class="space-y-2">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Category Name</label>
-                    <input
-                      v-model="categoryForm.name"
-                      type="text"
-                      placeholder="e.g. Massage Therapy"
-                      class="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary/30 outline-none transition-all"
-                      :class="{'border-red-200 bg-red-50/30': errors.name}"
-                    />
-                    <p v-if="errors.name" class="text-[10px] font-bold text-red-500 uppercase tracking-widest flex items-center gap-1 mt-1">
-                      <AlertCircle class="w-3 h-3" />
-                      {{ errors.name }}
-                    </p>
-                  </div>
-                </template>
-
-                <template v-else>
-                  <div class="space-y-2">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Service Name</label>
-                    <input
-                      v-model="serviceForm.name"
-                      type="text"
-                      placeholder="e.g. Deep Tissue Massage"
-                      class="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary/30 outline-none transition-all"
-                      :class="{'border-red-200 bg-red-50/30': errors.name}"
-                    />
-                    <p v-if="errors.name" class="text-[10px] font-bold text-red-500 uppercase tracking-widest flex items-center gap-1 mt-1">
-                      <AlertCircle class="w-3 h-3" />
-                      {{ errors.name }}
-                    </p>
-                  </div>
-
-                  <div class="space-y-2">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Description</label>
-                    <textarea
-                      v-model="serviceForm.description"
-                      rows="4"
-                      placeholder="Describe the service..."
-                      class="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary/30 outline-none transition-all resize-none"
-                    ></textarea>
-                  </div>
-
-                  <div class="grid grid-cols-2 gap-6">
-                    <div class="space-y-2">
-                      <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Duration (Min)</label>
-                      <input
-                        v-model.number="serviceForm.durationMinutes"
-                        type="number"
-                        class="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary/30 outline-none transition-all"
-                        :class="{'border-red-200 bg-red-50/30': errors.durationMinutes}"
-                      />
-                    </div>
-                    <div class="space-y-2">
-                      <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Price ($)</label>
-                      <input
-                        v-model.number="serviceForm.price"
-                        type="number"
-                        class="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary/30 outline-none transition-all"
-                        :class="{'border-red-200 bg-red-50/30': errors.price}"
-                      />
-                    </div>
-                  </div>
-
-                  <div class="space-y-2">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Category</label>
+            <div class="flex flex-wrap items-center gap-2">
+                <div v-if="venues.length > 1" class="relative">
                     <select
-                      v-model="serviceForm.serviceCategoryId"
-                      class="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary/30 outline-none transition-all"
-                      :class="{'border-red-200 bg-red-50/30': errors.serviceCategoryId}"
+                        v-model="selectedVenueId"
+                        class="h-10 appearance-none border border-slate-200 bg-white pl-3 pr-9 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600 outline-none transition-colors focus:border-primary/30"
                     >
-                      <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                        <option
+                            v-for="venue in venues"
+                            :key="venue.id"
+                            :value="venue.id"
+                        >
+                            {{ venue.name }}
+                        </option>
                     </select>
-                  </div>
-                </template>
-              </div>
 
-              <!-- Footer -->
-              <div class="p-8 border-t border-slate-100 bg-slate-50/30 flex items-center gap-4">
-                <UiButton
-                  label="Cancel"
-                  type="outline"
-                  class="flex-1 !py-4"
-                  @click="showSlideOver = false"
-                />
-                <UiButton
-                  :label="slideOverMode === 'add' ? 'Create' : 'Save Changes'"
-                  class="flex-[2] !py-4 shadow-xl shadow-teal-500/20 !bg-teal-500 hover:!bg-teal-400 !text-slate-950 font-black uppercase tracking-widest text-xs"
-                  :loading="isSubmitting"
-                  @click="handleSubmit"
-                />
-              </div>
+                    <ChevronDown
+                        class="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
+                    />
+                </div>
+
+                <button
+                    type="button"
+                    class="inline-flex h-10 items-center gap-2 border border-slate-200 bg-white px-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                    @click="openCategoryForm()"
+                >
+                    <Plus class="h-3.5 w-3.5" />
+                    Add Category
+                </button>
+
+                <button
+                    type="button"
+                    class="inline-flex h-10 items-center gap-2 bg-primary px-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:bg-slate-900"
+                    @click="openServiceForm()"
+                >
+                    <Plus class="h-3.5 w-3.5" />
+                    New Service
+                </button>
             </div>
-          </Transition>
         </div>
-      </Transition>
-    </Teleport>
-  </div>
+
+        <div v-if="pending" class="space-y-5">
+            <div
+                v-for="i in 2"
+                :key="i"
+                class="animate-pulse border border-slate-200 bg-white"
+            >
+                <div class="border-b border-slate-200 px-6 py-5">
+                    <div class="h-4 w-36 bg-slate-100" />
+                    <div class="mt-2 h-3 w-20 bg-slate-100" />
+                </div>
+
+                <div class="divide-y divide-slate-100">
+                    <div
+                        v-for="j in 2"
+                        :key="j"
+                        class="flex items-center gap-5 px-6 py-6"
+                    >
+                        <div class="h-9 w-9 bg-slate-100" />
+
+                        <div class="flex-1">
+                            <div class="h-3 w-32 bg-slate-100" />
+                            <div class="mt-2 h-2.5 w-64 bg-slate-100" />
+                        </div>
+
+                        <div class="h-7 w-16 bg-slate-100" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div
+            v-else-if="categories.length === 0"
+            class="flex min-h-[420px] flex-col items-center justify-center border border-slate-200 bg-white px-6 text-center"
+        >
+            <div
+                class="mb-5 flex h-12 w-12 items-center justify-center border border-slate-200 bg-slate-50"
+            >
+                <Scissors class="h-5 w-5 text-slate-300" />
+            </div>
+
+            <h3 class="text-sm font-semibold text-slate-900">
+                No services yet
+            </h3>
+
+            <p class="mt-1 max-w-sm text-xs leading-relaxed text-slate-400">
+                Create a service category and add your first service to make it
+                available to customers.
+            </p>
+
+            <button
+                type="button"
+                class="mt-5 inline-flex h-10 items-center gap-2 bg-primary px-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:bg-slate-900"
+                @click="openCategoryForm()"
+            >
+                <Plus class="h-3.5 w-3.5" />
+                Add Category
+            </button>
+        </div>
+
+        <div v-else class="space-y-5">
+            <section
+                v-for="category in categories"
+                :key="category.id"
+                class="overflow-hidden border border-slate-200 bg-white"
+            >
+                <div
+                    class="flex items-center justify-between border-b border-slate-200 bg-slate-50/60 px-4 py-4 sm:px-6"
+                >
+                    <div class="flex min-w-0 items-center gap-3">
+                        <div
+                            class="flex h-9 w-9 shrink-0 items-center justify-center border border-slate-200 bg-white text-slate-400"
+                        >
+                            <Layers class="h-4 w-4" />
+                        </div>
+
+                        <div class="min-w-0">
+                            <h2
+                                class="truncate text-sm font-semibold text-slate-950"
+                            >
+                                {{ category.name }}
+                            </h2>
+
+                            <p
+                                class="mt-0.5 text-[10px] uppercase tracking-[0.1em] text-slate-400"
+                            >
+                                {{ category.services.length }}
+                                {{
+                                    category.services.length === 1
+                                        ? "service"
+                                        : "services"
+                                }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-1">
+                        <button
+                            type="button"
+                            class="flex h-8 w-8 items-center justify-center border border-transparent text-slate-400 transition-colors hover:border-slate-200 hover:bg-white hover:text-slate-900"
+                            title="Edit category"
+                            @click="openCategoryForm(category)"
+                        >
+                            <Edit2 class="h-3.5 w-3.5" />
+                        </button>
+
+                        <button
+                            type="button"
+                            class="flex h-8 w-8 items-center justify-center border border-transparent text-slate-400 transition-colors hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600"
+                            title="Delete category"
+                            @click="handleDelete('category', category.id)"
+                        >
+                            <Trash2 class="h-3.5 w-3.5" />
+                        </button>
+                    </div>
+                </div>
+
+                <div
+                    v-if="category.services.length"
+                    class="divide-y divide-slate-100"
+                >
+                    <div
+                        v-for="service in category.services"
+                        :key="service.id"
+                        class="group flex flex-col gap-4 px-4 py-5 transition-colors hover:bg-slate-50/60 sm:flex-row sm:items-center sm:px-6"
+                    >
+                        <div class="flex min-w-0 flex-1 items-start gap-4">
+                            <div
+                                class="flex h-9 w-9 shrink-0 items-center justify-center border border-slate-200 bg-slate-50 text-slate-400"
+                            >
+                                <Scissors class="h-4 w-4" />
+                            </div>
+
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <h3
+                                        class="text-sm font-semibold text-slate-900 transition-colors group-hover:text-primary"
+                                    >
+                                        {{ service.name }}
+                                    </h3>
+
+                                    <span
+                                        class="border border-slate-200 bg-slate-50 px-2 py-1 text-[9px] font-semibold text-slate-700"
+                                    >
+                                        R{{
+                                            Number(
+                                                service.price,
+                                            ).toLocaleString()
+                                        }}
+                                    </span>
+                                </div>
+
+                                <p
+                                    class="mt-1 max-w-2xl truncate text-xs text-slate-400"
+                                >
+                                    {{
+                                        service.description ||
+                                        "No service description provided."
+                                    }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div
+                            class="flex items-center justify-between gap-4 sm:justify-end"
+                        >
+                            <div
+                                class="flex items-center gap-2 text-[10px] font-medium text-slate-500"
+                            >
+                                <Clock class="h-3.5 w-3.5 text-slate-400" />
+                                {{ service.durationMinutes }}
+                                mins
+                            </div>
+
+                            <div class="flex items-center gap-1">
+                                <button
+                                    type="button"
+                                    class="flex h-8 w-8 items-center justify-center border border-transparent text-slate-400 transition-colors hover:border-slate-200 hover:bg-white hover:text-slate-900"
+                                    title="Edit service"
+                                    @click="openServiceForm(service)"
+                                >
+                                    <Edit2 class="h-3.5 w-3.5" />
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="flex h-8 w-8 items-center justify-center border border-transparent text-slate-400 transition-colors hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600"
+                                    title="Delete service"
+                                    @click="handleDelete('service', service.id)"
+                                >
+                                    <Trash2 class="h-3.5 w-3.5" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else class="px-6 py-8 text-center">
+                    <p class="text-xs text-slate-400">
+                        No services in this category.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    class="flex w-full items-center gap-3 border-t border-slate-100 px-4 py-4 text-left text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 transition-colors hover:bg-slate-50 hover:text-primary sm:px-6"
+                    @click="openServiceForm(undefined, category.id)"
+                >
+                    <span
+                        class="flex h-7 w-7 items-center justify-center border border-slate-200 bg-white"
+                    >
+                        <Plus class="h-3.5 w-3.5" />
+                    </span>
+
+                    Add service to {{ category.name }}
+
+                    <ChevronRight class="ml-auto h-3.5 w-3.5 text-slate-300" />
+                </button>
+            </section>
+        </div>
+
+        <UiSlideover
+            :show="showSlideOver"
+            :title="
+                slideOverMode === 'add'
+                    ? `New ${
+                          slideOverType === 'category' ? 'Category' : 'Service'
+                      }`
+                    : `Edit ${
+                          slideOverType === 'category' ? 'Category' : 'Service'
+                      }`
+            "
+            @close="showSlideOver = false"
+        >
+            <div class="space-y-6">
+                <div v-if="slideOverType === 'category'" class="space-y-6">
+                    <div class="space-y-2">
+                        <label
+                            class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400"
+                        >
+                            Category Name
+                        </label>
+
+                        <input
+                            v-model="categoryForm.name"
+                            type="text"
+                            placeholder="e.g. Hair Services"
+                            class="h-11 w-full border bg-white px-3 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-primary/30"
+                            :class="
+                                errors.name
+                                    ? 'border-rose-200 bg-rose-50/20'
+                                    : 'border-slate-200'
+                            "
+                        />
+
+                        <p
+                            v-if="errors.name"
+                            class="flex items-center gap-1 text-[10px] text-rose-600"
+                        >
+                            <AlertCircle class="h-3 w-3" />
+                            {{ errors.name }}
+                        </p>
+                    </div>
+
+                    <div class="border border-slate-200 bg-slate-50 p-4">
+                        <p class="text-xs leading-relaxed text-slate-500">
+                            Categories help organize your services and make them
+                            easier for customers to discover.
+                        </p>
+                    </div>
+                </div>
+
+                <div v-else class="space-y-6">
+                    <div class="space-y-2">
+                        <label
+                            class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400"
+                        >
+                            Service Name
+                        </label>
+
+                        <input
+                            v-model="serviceForm.name"
+                            type="text"
+                            placeholder="e.g. Deep Tissue Massage"
+                            class="h-11 w-full border bg-white px-3 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-primary/30"
+                            :class="
+                                errors.name
+                                    ? 'border-rose-200 bg-rose-50/20'
+                                    : 'border-slate-200'
+                            "
+                        />
+
+                        <p
+                            v-if="errors.name"
+                            class="flex items-center gap-1 text-[10px] text-rose-600"
+                        >
+                            <AlertCircle class="h-3 w-3" />
+                            {{ errors.name }}
+                        </p>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label
+                            class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400"
+                        >
+                            Description
+                        </label>
+
+                        <textarea
+                            v-model="serviceForm.description"
+                            rows="4"
+                            placeholder="Describe this service..."
+                            class="w-full resize-none border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-primary/30"
+                        />
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-2">
+                            <label
+                                class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400"
+                            >
+                                Duration
+                            </label>
+
+                            <div class="relative">
+                                <input
+                                    v-model.number="serviceForm.durationMinutes"
+                                    type="number"
+                                    min="1"
+                                    class="h-11 w-full border border-slate-200 bg-white px-3 pr-12 text-sm text-slate-900 outline-none focus:border-primary/30"
+                                />
+
+                                <span
+                                    class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400"
+                                >
+                                    MIN
+                                </span>
+                            </div>
+
+                            <p
+                                v-if="errors.durationMinutes"
+                                class="text-[10px] text-rose-600"
+                            >
+                                {{ errors.durationMinutes }}
+                            </p>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label
+                                class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400"
+                            >
+                                Price
+                            </label>
+
+                            <div class="relative">
+                                <span
+                                    class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400"
+                                >
+                                    R
+                                </span>
+
+                                <input
+                                    v-model.number="serviceForm.price"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    class="h-11 w-full border border-slate-200 bg-white pl-7 pr-3 text-sm text-slate-900 outline-none focus:border-primary/30"
+                                />
+                            </div>
+
+                            <p
+                                v-if="errors.price"
+                                class="text-[10px] text-rose-600"
+                            >
+                                {{ errors.price }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label
+                            class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400"
+                        >
+                            Category
+                        </label>
+
+                        <div class="relative">
+                            <select
+                                v-model="serviceForm.serviceCategoryId"
+                                class="h-11 w-full appearance-none border border-slate-200 bg-white px-3 pr-9 text-xs text-slate-900 outline-none focus:border-primary/30"
+                            >
+                                <option
+                                    v-for="category in categories"
+                                    :key="category.id"
+                                    :value="category.id"
+                                >
+                                    {{ category.name }}
+                                </option>
+                            </select>
+
+                            <ChevronDown
+                                class="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
+                            />
+                        </div>
+
+                        <p
+                            v-if="errors.serviceCategoryId"
+                            class="text-[10px] text-rose-600"
+                        >
+                            {{ errors.serviceCategoryId }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <template #footer>
+                <div class="flex gap-3 border-t border-slate-200 p-6">
+                    <UiButton
+                        label="Cancel"
+                        type="outline"
+                        class="flex-1 !py-3"
+                        :disabled="isSubmitting"
+                        @click="showSlideOver = false"
+                    />
+
+                    <UiButton
+                        :label="
+                            slideOverMode === 'add' ? 'Create' : 'Save Changes'
+                        "
+                        :loading="isSubmitting"
+                        class="flex-[2] !py-3"
+                        @click="handleSubmit"
+                    />
+                </div>
+            </template>
+        </UiSlideover>
+    </div>
 </template>

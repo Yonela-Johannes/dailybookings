@@ -36,11 +36,18 @@ export default defineEventHandler(async (event) => {
       })
     ])
 
+    // Serialization Fix: Convert Decimals to Numbers
+    const cleanedBookings = bookings.map(b => ({
+      ...b,
+      priceTotal: Number(b.priceTotal),
+      services: b.services.map(s => ({
+        ...s,
+        price: Number(s.price)
+      }))
+    }))
+
     return {
-      data: bookings.map(b => ({
-        ...b,
-        priceTotal: Number(b.priceTotal)
-      })),
+      data: cleanedBookings,
       meta: {
         total,
         page,

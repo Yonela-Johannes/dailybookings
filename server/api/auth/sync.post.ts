@@ -1,17 +1,18 @@
 import { prisma } from '~/server/utils/prisma'
 import { z } from 'zod'
-import { serverSupabaseUser } from '#supabase/server'
+import { serverSupabaseClient } from '#supabase/server'
 
 const syncUserSchema = z.object({
   id: z.string(),
-  email: z.string().email(),
-  fullName: z.string().optional().nullable(),
+  email: z.string().trim().email().toLowerCase(),
+  fullName: z.string().trim().optional().nullable(),
   avatarUrl: z.string().url().optional().nullable(),
   role: z.enum(['CUSTOMER', 'BUSINESS_OWNER', 'PLATFORM_ADMIN']).optional()
 })
 
 export default defineEventHandler(async (event) => {
-  const user = await serverSupabaseUser(event)
+  const client = await serverSupabaseClient(event)
+  const { data: { user } } = await client.auth.getUser()
   const body = await readBody(event)
 
   // Validation
@@ -28,18 +29,35 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
+    const existingUser = await prisma.user.findUnique({
+      where: { id: data.id }
+    })
+
+    const updateData: any = {
+      email: data.email,
+      fullName: data.fullName,
+    }
+
+    if (data.role) {
+      if (data.role === 'PLATFORM_ADMIN') {
+        if (!existingUser || existingUser.role !== 'PLATFORM_ADMIN') {
+           updateData.role = 'CUSTOMER'
+        } else {
+           updateData.role = 'PLATFORM_ADMIN'
+        }
+      } else {
+        updateData.role = data.role
+      }
+    }
+
     const dbUser = await prisma.user.upsert({
       where: { id: data.id },
-      update: {
-        email: data.email,
-        fullName: data.fullName,
-        role: data.role
-      },
+      update: updateData,
       create: {
         id: data.id,
         email: data.email,
         fullName: data.fullName,
-        role: data.role || 'CUSTOMER'
+        role: (data.role === 'PLATFORM_ADMIN') ? 'CUSTOMER' : (data.role || 'CUSTOMER')
       }
     })
 

@@ -1,474 +1,512 @@
 <script setup lang="ts">
-import {
-  Plus,
-  Edit2,
-  Trash2,
-  FileText,
-} from 'lucide-vue-next'
-import { format, parseISO } from 'date-fns'
+import { Plus, Edit2, Trash2, FileText, ArrowUpRight } from "lucide-vue-next";
+import { format, parseISO } from "date-fns";
+import Head from "~/components/head/Head.vue";
 
 definePageMeta({
-  layout: 'admin',
-  middleware: 'auth',
-})
+    layout: "admin",
+    middleware: "auth",
+});
 
 const {
-  data: blogResponse,
-  pending,
-  refresh,
-} = await useFetch('/api/admin/blog')
+    data: blogResponse,
+    pending,
+    refresh,
+} = await useFetch("/api/admin/blog");
 
-const { data: categoriesResponse } = await useFetch('/api/blog/categories')
+const { data: categoriesResponse } = await useFetch("/api/blog/categories");
 
-const blogs = computed(() => blogResponse.value?.data || [])
+const blogs = computed(() => blogResponse.value?.data || []);
 
 const meta = computed(() => {
-  return (
-    blogResponse.value?.meta || {
-      total: 0,
-      page: 1,
-      totalPages: 1,
-    }
-  )
-})
+    return (
+        blogResponse.value?.meta || {
+            total: 0,
+            page: 1,
+            totalPages: 1,
+        }
+    );
+});
 
-const categories = computed(() => categoriesResponse.value || [])
+const categories = computed(() => categoriesResponse.value || []);
 
-const isSlideoverOpen = ref(false)
-const isSaving = ref(false)
-const editingBlog = ref<any>(null)
+const isSlideoverOpen = ref(false);
+const isSaving = ref(false);
+const editingBlog = ref<any>(null);
 
 const form = ref({
-  title: '',
-  slug: '',
-  content: '',
-  excerpt: '',
-  featuredImage: '',
-  categoryId: '',
-  published: false,
-})
+    title: "",
+    slug: "",
+    content: "",
+    excerpt: "",
+    featuredImage: "",
+    categoryId: "",
+    published: false,
+});
 
 const openCreate = () => {
-  editingBlog.value = null
+    editingBlog.value = null;
 
-  form.value = {
-    title: '',
-    slug: '',
-    content: '',
-    excerpt: '',
-    featuredImage: '',
-    categoryId: categories.value[0]?.id || '',
-    published: false,
-  }
+    form.value = {
+        title: "",
+        slug: "",
+        content: "",
+        excerpt: "",
+        featuredImage: "",
+        categoryId: categories.value[0]?.id || "",
+        published: false,
+    };
 
-  isSlideoverOpen.value = true
-}
+    isSlideoverOpen.value = true;
+};
 
 const openEdit = (blog: any) => {
-  editingBlog.value = blog
+    editingBlog.value = blog;
 
-  form.value = {
-    title: blog.title,
-    slug: blog.slug,
-    content: blog.content,
-    excerpt: blog.excerpt || '',
-    featuredImage: blog.featuredImage || '',
-    categoryId: blog.categoryId || '',
-    published: blog.published,
-  }
+    form.value = {
+        title: blog.title,
+        slug: blog.slug,
+        content: blog.content,
+        excerpt: blog.excerpt || "",
+        featuredImage: blog.featuredImage || "",
+        categoryId: blog.categoryId || "",
+        published: blog.published,
+    };
 
-  isSlideoverOpen.value = true
-}
+    isSlideoverOpen.value = true;
+};
 
 const closeSlideover = () => {
-  if (isSaving.value) return
+    if (isSaving.value) return;
 
-  isSlideoverOpen.value = false
-}
+    isSlideoverOpen.value = false;
+};
 
 const handleSave = async () => {
-  if (isSaving.value) return
+    if (isSaving.value) return;
 
-  isSaving.value = true
+    isSaving.value = true;
 
-  try {
-    if (editingBlog.value) {
-      await $fetch(`/api/admin/blog/${editingBlog.value.id}`, {
-        method: 'PATCH',
-        body: form.value,
-      })
-    } else {
-      await $fetch('/api/admin/blog', {
-        method: 'POST',
-        body: form.value,
-      })
+    try {
+        if (editingBlog.value) {
+            await $fetch(`/api/admin/blog/${editingBlog.value.id}`, {
+                method: "PATCH",
+                body: form.value,
+            });
+        } else {
+            await $fetch("/api/admin/blog", {
+                method: "POST",
+                body: form.value,
+            });
+        }
+
+        await refresh();
+        isSlideoverOpen.value = false;
+    } catch (error) {
+        console.error("Failed to save blog", error);
+    } finally {
+        isSaving.value = false;
     }
-
-    await refresh()
-
-    isSlideoverOpen.value = false
-  } catch (error) {
-    console.error('Failed to save blog', error)
-  } finally {
-    isSaving.value = false
-  }
-}
+};
 
 const handleDelete = async (id: string) => {
-  const confirmed = window.confirm(
-    'Are you sure you want to delete this article?',
-  )
+    const confirmed = window.confirm(
+        "Are you sure you want to delete this article?",
+    );
 
-  if (!confirmed) return
+    if (!confirmed) return;
 
-  try {
-    await $fetch(`/api/admin/blog/${id}`, {
-      method: 'DELETE',
-    })
+    try {
+        await $fetch(`/api/admin/blog/${id}`, {
+            method: "DELETE",
+        });
 
-    await refresh()
-  } catch (error) {
-    console.error('Failed to delete blog', error)
-  }
-}
+        await refresh();
+    } catch (error) {
+        console.error("Failed to delete blog", error);
+    }
+};
 
 const updateSlug = () => {
-  if (editingBlog.value) return
+    if (editingBlog.value) return;
 
-  form.value.slug = form.value.title
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
+    form.value.slug = form.value.title
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+};
 </script>
 
 <template>
-  <div class="space-y-8">
-    <!-- Header -->
-    <div
-      class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-    >
-      <div>
-        <h1
-          class="text-3xl font-extrabold uppercase italic tracking-tight text-white"
-        >
-          Editorial Journal
-        </h1>
+    <div class="space-y-10">
+        <Head title="Blogs" description="Stories, guides & local insights" />
 
-        <p
-          class="text-[10px] font-bold uppercase tracking-widest text-slate-500"
-        >
-          Marketplace Stories & Guides
-        </p>
-      </div>
-
-      <button
-        type="button"
-        class="flex items-center gap-2 rounded-xl bg-teal-500 px-6 py-2.5 text-xs font-black uppercase tracking-widest text-slate-950 shadow-lg shadow-teal-500/20 transition-all hover:bg-teal-400"
-        @click="openCreate"
-      >
-        <Plus class="h-5 w-5" />
-
-        New Article
-      </button>
-    </div>
-
-    <!-- Loading -->
-    <div
-      v-if="pending"
-      class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3"
-    >
-      <div
-        v-for="i in 3"
-        :key="i"
-        class="h-96 animate-pulse rounded-[32px] bg-slate-900"
-      />
-    </div>
-
-    <!-- Empty -->
-    <div
-      v-else-if="blogs.length === 0"
-      class="rounded-[32px] border border-slate-800 bg-slate-900/40 p-20 text-center"
-    >
-      <FileText class="mx-auto mb-4 h-16 w-16 text-slate-800" />
-
-      <h3 class="text-xl font-bold text-white">
-        No articles found
-      </h3>
-
-      <p class="text-slate-500">
-        Start writing your first story to inspire the community.
-      </p>
-    </div>
-
-    <!-- Blog Grid -->
-    <div
-      v-else
-      class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3"
-    >
-      <article
-        v-for="blog in blogs"
-        :key="blog.id"
-        class="group flex flex-col overflow-hidden rounded-[32px] border border-slate-800 bg-slate-900/40 transition-all duration-500 hover:border-teal-500/30"
-      >
-        <!-- Image -->
-        <div class="relative aspect-video overflow-hidden bg-slate-800">
-          <img
-            v-if="blog.featuredImage"
-            :src="blog.featuredImage"
-            :alt="blog.title"
-            class="h-full w-full object-cover opacity-60 transition-opacity duration-700 group-hover:opacity-100"
-          />
-
-          <div
-            v-else
-            class="flex h-full w-full items-center justify-center text-slate-700"
-          >
-            <FileText class="h-12 w-12" />
-          </div>
-
-          <div class="absolute left-4 top-4">
-            <span
-              :class="[
-                'rounded-full border px-3 py-1 text-[9px] font-black uppercase tracking-widest',
-                blog.published
-                  ? 'border-teal-500/20 bg-teal-500/10 text-teal-500'
-                  : 'border-slate-700 bg-slate-800 text-slate-500',
-              ]"
+        <!-- Page actions -->
+        <div class="flex items-center justify-end">
+            <button
+                type="button"
+                class="group flex h-11 items-center gap-2  bg-slate-950 px-5 text-sm font-bold text-white transition-all duration-300 hover:bg-teal-500"
+                @click="openCreate"
             >
-              {{ blog.published ? 'Published' : 'Draft' }}
-            </span>
-          </div>
+                <Plus
+                    class="h-4 w-4 transition-transform duration-300 group-hover:rotate-90"
+                />
+                New article
+            </button>
         </div>
 
-        <!-- Content -->
-        <div class="flex flex-1 flex-col p-8">
-          <div
-            class="mb-2 text-[9px] font-black uppercase tracking-widest text-teal-500"
-          >
-            {{ blog.category?.name || 'Uncategorized' }}
-          </div>
-
-          <h2
-            class="mb-4 line-clamp-2 text-xl font-bold leading-tight tracking-tight text-white"
-          >
-            {{ blog.title }}
-          </h2>
-
-          <p
-            class="mb-8 line-clamp-2 text-sm font-medium text-slate-500"
-          >
-            {{ blog.excerpt || 'No summary available.' }}
-          </p>
-
-          <div
-            class="mt-auto flex items-center justify-between border-t border-slate-800 pt-8"
-          >
+        <!-- Loading -->
+        <div
+            v-if="pending"
+            class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
+        >
             <div
-              class="text-[10px] font-black uppercase tracking-widest text-slate-600"
+                v-for="i in 3"
+                :key="i"
+                class="overflow-hidden  border border-slate-200 bg-white"
             >
-              {{
-                blog.createdAt
-                  ? format(parseISO(blog.createdAt), 'MMM d, yyyy')
-                  : '—'
-              }}
-            </div>
+                <div class="aspect-video animate-pulse bg-slate-100" />
 
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                class="rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-slate-400 transition-all hover:text-white"
-                @click="openEdit(blog)"
-              >
-                <Edit2 class="h-4 w-4" />
-              </button>
-
-              <button
-                type="button"
-                class="rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-slate-400 transition-all hover:text-red-400"
-                @click="handleDelete(blog.id)"
-              >
-                <Trash2 class="h-4 w-4" />
-              </button>
+                <div class="space-y-4 p-6">
+                    <div class="h-3 w-24 animate-pulse rounded bg-slate-100" />
+                    <div class="h-6 w-3/4 animate-pulse rounded bg-slate-100" />
+                    <div
+                        class="h-4 w-full animate-pulse rounded bg-slate-100"
+                    />
+                    <div class="h-4 w-2/3 animate-pulse rounded bg-slate-100" />
+                </div>
             </div>
-          </div>
         </div>
-      </article>
+
+        <!-- Empty -->
+        <div
+            v-else-if="blogs.length === 0"
+            class=" border border-slate-200 bg-white px-6 py-24 text-center"
+        >
+            <div
+                class="mx-auto mb-6 flex h-14 w-14 items-center justify-center  bg-slate-50"
+            >
+                <FileText class="h-6 w-6 text-slate-400" />
+            </div>
+
+            <h3 class="text-xl font-bold tracking-tight text-slate-900">
+                No articles yet
+            </h3>
+
+            <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+                Create your first story, guide or local insight for the
+                DailyBookings community.
+            </p>
+
+            <button
+                type="button"
+                class="mt-6 inline-flex h-10 items-center gap-2  bg-slate-950 px-5 text-sm font-bold text-white transition-colors hover:bg-teal-500"
+                @click="openCreate"
+            >
+                <Plus class="h-4 w-4" />
+                Create article
+            </button>
+        </div>
+
+        <!-- Blog grid -->
+        <div
+            v-else
+            class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
+        >
+            <article
+                v-for="blog in blogs"
+                :key="blog.id"
+                class="group flex flex-col overflow-hidden  border border-slate-200 bg-white transition-all duration-500 hover:border-slate-300 hover:shadow-xl hover:shadow-slate-900/[0.04]"
+            >
+                <!-- Image -->
+                <div class="relative aspect-[4/3] overflow-hidden bg-slate-100">
+                    <img
+                        v-if="blog.featuredImage"
+                        :src="blog.featuredImage"
+                        :alt="blog.title"
+                        class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.025]"
+                    />
+
+                    <div
+                        v-else
+                        class="flex h-full w-full items-center justify-center"
+                    >
+                        <FileText class="h-10 w-10 text-slate-300" />
+                    </div>
+
+                    <!-- Status -->
+                    <div class="absolute left-4 top-4">
+                        <span
+                            class="inline-flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 text-[10px] font-bold text-slate-700 shadow-sm backdrop-blur"
+                        >
+                            <span
+                                :class="[
+                                    'h-1.5 w-1.5 rounded-full',
+                                    blog.published
+                                        ? 'bg-teal-500'
+                                        : 'bg-slate-300',
+                                ]"
+                            />
+
+                            {{ blog.published ? "Published" : "Draft" }}
+                        </span>
+                    </div>
+
+                    <!-- Edit -->
+                    <button
+                        type="button"
+                        aria-label="Edit article"
+                        class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center  bg-white/95 text-slate-700 opacity-0 shadow-sm backdrop-blur transition-all duration-300 hover:bg-slate-950 hover:text-white group-hover:opacity-100"
+                        @click="openEdit(blog)"
+                    >
+                        <Edit2 class="h-4 w-4" />
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div class="flex flex-1 flex-col p-6">
+                    <div class="mb-3 flex items-center justify-between gap-4">
+                        <span
+                            class="text-[10px] font-bold uppercase tracking-[0.16em] text-teal-600"
+                        >
+                            {{ blog.category?.name || "Uncategorized" }}
+                        </span>
+
+                        <span class="text-xs text-slate-400">
+                            {{
+                                blog.createdAt
+                                    ? format(
+                                          parseISO(blog.createdAt),
+                                          "MMM d, yyyy",
+                                      )
+                                    : "—"
+                            }}
+                        </span>
+                    </div>
+
+                    <h2
+                        class="line-clamp-2 text-xl font-bold leading-tight tracking-tight text-slate-950 transition-colors duration-300 group-hover:text-teal-600"
+                    >
+                        {{ blog.title }}
+                    </h2>
+
+                    <p
+                        class="mt-3 line-clamp-3 text-sm leading-6 text-slate-500"
+                    >
+                        {{ blog.excerpt || "No summary available." }}
+                    </p>
+
+                    <div
+                        class="mt-6 flex items-center justify-between border-t border-slate-100 pt-5"
+                    >
+                        <button
+                            type="button"
+                            class="group/link inline-flex items-center gap-2 text-xs font-bold text-slate-900 transition-colors hover:text-teal-600"
+                            @click="openEdit(blog)"
+                        >
+                            Edit article
+
+                            <ArrowUpRight
+                                class="h-3.5 w-3.5 transition-transform duration-300 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5"
+                            />
+                        </button>
+
+                        <button
+                            type="button"
+                            aria-label="Delete article"
+                            class="flex h-9 w-9 items-center justify-center  text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                            @click="handleDelete(blog.id)"
+                        >
+                            <Trash2 class="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
+            </article>
+        </div>
+
+        <!-- Slideover -->
+        <UiSlideover
+            :open="isSlideoverOpen"
+            :title="editingBlog ? 'Update Article' : 'Create Article'"
+            @close="closeSlideover"
+        >
+            <form
+                id="blog-article-form"
+                class="space-y-8 p-1"
+                @submit.prevent="handleSave"
+            >
+                <!-- Featured image -->
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-sm font-bold text-slate-900">
+                            Cover image
+                        </label>
+
+                        <p class="mt-1 text-xs text-slate-500">
+                            Use a strong image that represents the article.
+                        </p>
+                    </div>
+
+                    <div
+                        v-if="form.featuredImage"
+                        class="group/preview relative aspect-video overflow-hidden  border border-slate-200 bg-slate-100"
+                    >
+                        <img
+                            :src="form.featuredImage"
+                            alt=""
+                            class="h-full w-full object-cover"
+                        />
+
+                        <div
+                            class="absolute inset-0 flex items-center justify-center bg-slate-950/40 opacity-0 transition-opacity duration-300 group-hover/preview:opacity-100"
+                        >
+                            <button
+                                type="button"
+                                class="flex h-10 w-10 items-center justify-center  bg-white text-red-500 shadow-xl transition-colors hover:bg-red-500 hover:text-white"
+                                @click="form.featuredImage = ''"
+                            >
+                                <Trash2 class="h-4 w-4" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <UiMediaUpload
+                        v-else
+                        entity-type="BLOG"
+                        label="Upload cover image"
+                        @uploaded="(data) => (form.featuredImage = data.url)"
+                    />
+                </div>
+
+                <!-- Title -->
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-slate-900">
+                        Title
+                    </label>
+
+                    <input
+                        v-model="form.title"
+                        type="text"
+                        required
+                        placeholder="Give your article a clear title"
+                        class="w-full  border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10"
+                        @input="updateSlug"
+                    />
+                </div>
+
+                <!-- Slug -->
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-slate-900">
+                        URL slug
+                    </label>
+
+                    <input
+                        v-model="form.slug"
+                        type="text"
+                        required
+                        placeholder="article-url"
+                        class="w-full  border border-slate-200 bg-white px-4 py-3.5 font-mono text-sm text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10"
+                    />
+                </div>
+
+                <!-- Category -->
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-slate-900">
+                        Category
+                    </label>
+
+                    <select
+                        v-model="form.categoryId"
+                        class="w-full  border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 outline-none transition-all focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10"
+                    >
+                        <option
+                            v-for="cat in categories"
+                            :key="cat.id"
+                            :value="cat.id"
+                        >
+                            {{ cat.name }}
+                        </option>
+                    </select>
+                </div>
+
+                <!-- Excerpt -->
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-slate-900">
+                        Short description
+                    </label>
+
+                    <textarea
+                        v-model="form.excerpt"
+                        rows="3"
+                        placeholder="A short summary of the article..."
+                        class="w-full resize-none  border border-slate-200 bg-white px-4 py-3.5 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10"
+                    />
+                </div>
+
+                <!-- Content -->
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-slate-900">
+                        Article content
+                    </label>
+
+                    <textarea
+                        v-model="form.content"
+                        rows="12"
+                        required
+                        placeholder="Write your article..."
+                        class="w-full resize-none  border border-slate-200 bg-white px-4 py-3.5 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10"
+                    />
+                </div>
+
+                <!-- Published -->
+                <div
+                    class="flex items-center justify-between  border border-slate-200 bg-slate-50 p-5"
+                >
+                    <div>
+                        <div class="text-sm font-bold text-slate-900">
+                            Publish article
+                        </div>
+
+                        <p class="mt-1 text-xs leading-5 text-slate-500">
+                            Published articles are visible on DailyBookings.
+                        </p>
+                    </div>
+
+                    <input
+                        v-model="form.published"
+                        type="checkbox"
+                        class="h-5 w-5 rounded border-slate-300 text-teal-500 focus:ring-teal-500"
+                    />
+                </div>
+            </form>
+
+            <template #footer>
+                <div class="flex gap-3 border-t border-slate-100 p-6">
+                    <UiButton
+                        label="Cancel"
+                        type="secondary"
+                        class="flex-1"
+                        :disabled="isSaving"
+                        @click="closeSlideover"
+                    />
+
+                    <button
+                        type="submit"
+                        form="blog-article-form"
+                        :disabled="isSaving"
+                        class="flex h-11 flex-1 items-center justify-center  bg-slate-950 px-5 text-sm font-bold text-white transition-colors hover:bg-teal-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        {{
+                            isSaving
+                                ? "Saving..."
+                                : editingBlog
+                                  ? "Save changes"
+                                  : "Publish article"
+                        }}
+                    </button>
+                </div>
+            </template>
+        </UiSlideover>
     </div>
-
-    <!-- Slideover -->
-    <UiSlideover
-      :open="isSlideoverOpen"
-      :title="editingBlog ? 'Update Article' : 'Create Article'"
-      @close="closeSlideover"
-    >
-      <!--
-        IMPORTANT:
-        The default content and #footer slot are siblings.
-
-        #footer must NOT be nested inside the form.
-      -->
-      <form
-        id="blog-article-form"
-        class="space-y-8 p-1"
-        @submit.prevent="handleSave"
-      >
-        <div class="space-y-6">
-          <!-- Featured Image -->
-          <div class="space-y-2">
-            <label
-              class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400"
-            >
-              Featured Image URL
-            </label>
-
-            <input
-              v-model="form.featuredImage"
-              type="url"
-              placeholder="https://example.com/image.jpg"
-              class="w-full rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-sm font-bold outline-none"
-            />
-          </div>
-
-          <!-- Title -->
-          <div class="space-y-2">
-            <label
-              class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400"
-            >
-              Title
-            </label>
-
-            <input
-              v-model="form.title"
-              type="text"
-              required
-              class="w-full rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-sm font-bold outline-none"
-              @input="updateSlug"
-            />
-          </div>
-
-          <!-- Slug -->
-          <div class="space-y-2">
-            <label
-              class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400"
-            >
-              Slug
-            </label>
-
-            <input
-              v-model="form.slug"
-              type="text"
-              required
-              class="w-full rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 font-mono text-sm font-bold outline-none"
-            />
-          </div>
-
-          <!-- Category -->
-          <div class="space-y-2">
-            <label
-              class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400"
-            >
-              Category
-            </label>
-
-            <select
-              v-model="form.categoryId"
-              class="w-full rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-sm font-bold outline-none"
-            >
-              <option
-                v-for="cat in categories"
-                :key="cat.id"
-                :value="cat.id"
-              >
-                {{ cat.name }}
-              </option>
-            </select>
-          </div>
-
-          <!-- Excerpt -->
-          <div class="space-y-2">
-            <label
-              class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400"
-            >
-              Excerpt (Summary)
-            </label>
-
-            <textarea
-              v-model="form.excerpt"
-              rows="3"
-              class="w-full resize-none rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-sm font-bold outline-none"
-            />
-          </div>
-
-          <!-- Content -->
-          <div class="space-y-2">
-            <label
-              class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400"
-            >
-              Full Content (Markdown)
-            </label>
-
-            <textarea
-              v-model="form.content"
-              rows="10"
-              required
-              class="w-full resize-none rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-sm font-bold outline-none"
-            />
-          </div>
-
-          <!-- Published -->
-          <div
-            class="flex items-center justify-between rounded-2xl bg-slate-50 p-5"
-          >
-            <div>
-              <div class="text-sm font-black text-slate-900">
-                Published Status
-              </div>
-
-              <p
-                class="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-500"
-              >
-                Visibility on the public site
-              </p>
-            </div>
-
-            <input
-              v-model="form.published"
-              type="checkbox"
-              class="h-6 w-6 rounded-lg border-slate-300 text-teal-500 focus:ring-teal-500"
-            />
-          </div>
-        </div>
-      </form>
-
-      <!-- MUST be direct child of UiSlideover -->
-      <template #footer>
-        <div class="flex gap-4 border-t border-slate-100 p-8">
-          <UiButton
-            label="Cancel"
-            type="secondary"
-            class="flex-1"
-            :disabled="isSaving"
-            @click="closeSlideover"
-          />
-
-          <button
-            type="submit"
-            form="blog-article-form"
-            :disabled="isSaving"
-            class="flex flex-1 items-center justify-center rounded-xl bg-teal-500 px-5 py-3 text-sm font-black text-slate-950 transition-colors hover:bg-teal-400 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {{
-              isSaving
-                ? 'Processing...'
-                : editingBlog
-                  ? 'Update'
-                  : 'Publish'
-            }}
-          </button>
-        </div>
-      </template>
-    </UiSlideover>
-  </div>
 </template>

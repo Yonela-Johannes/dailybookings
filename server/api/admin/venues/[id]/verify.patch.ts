@@ -4,7 +4,8 @@ import { z } from 'zod'
 
 const verifySchema = z.object({
   verified: z.boolean().optional(),
-  status: z.enum(['active', 'suspended', 'draft']).optional()
+  status: z.enum(['ACTIVE', 'SUSPENDED', 'DRAFT']).optional(),
+  communityId: z.string().uuid().optional().nullable()
 })
 
 export default defineEventHandler(async (event) => {
@@ -14,7 +15,7 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event)
 
   try {
-    const { verified, status } = verifySchema.parse(body)
+    const { verified, status, communityId } = verifySchema.parse(body)
 
     // Check if we are updating the Business verification or Venue status
     // The prompt says "Verify/Suspend venues", but Business model has "verified" field.
@@ -33,6 +34,7 @@ export default defineEventHandler(async (event) => {
       where: { id },
       data: {
         status: status,
+        communityId: communityId,
         business: verified !== undefined ? {
           update: {
             verified: verified

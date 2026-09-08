@@ -1,515 +1,888 @@
 <script setup lang="ts">
 import {
-  ChevronLeft,
-  ChevronRight,
-  Calendar as CalendarIcon,
-  Plus,
-  Filter,
-  Search,
-  Clock,
-  User,
-  AlertCircle
-} from 'lucide-vue-next'
+    ChevronLeft,
+    ChevronRight,
+    Calendar as CalendarIcon,
+    Plus,
+    Filter,
+    Search,
+    Clock,
+    Layers,
+    AlertCircle,
+} from "lucide-vue-next";
 import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  eachDayOfInterval,
-  isSameMonth,
-  isToday,
-  addMonths,
-  subMonths,
-  startOfWeek,
-  endOfWeek,
-  isSameDay,
-  parseISO
-} from 'date-fns'
+    format,
+    startOfMonth,
+    endOfMonth,
+    eachDayOfInterval,
+    isSameMonth,
+    isToday,
+    addMonths,
+    subMonths,
+    startOfWeek,
+    endOfWeek,
+    isSameDay,
+    parseISO,
+} from "date-fns";
 
 definePageMeta({
-  layout: 'business',
-  middleware: 'auth'
-})
+    layout: "business",
+    middleware: "auth",
+});
 
-const currentDate = ref(new Date())
-const view = ref<'month' | 'week' | 'day'>('month')
-const searchQuery = ref('')
-const selectedEmployeeId = ref('all')
+const currentDate = ref(new Date());
+const view = ref<"month" | "week" | "day">("month");
+const searchQuery = ref("");
+const selectedEmployeeId = ref("all");
 
-// Fetch Team for filtering
-const { data: teamData } = await useFetch('/api/business/team', {
-  query: { limit: 100 }
-})
-const employees = computed(() => (teamData.value as any)?.data || [])
+const { data: teamData } = await useFetch("/api/business/team", {
+    query: { limit: 100 },
+});
 
-// Fetch Venues for new appointment
-const { data: venuesData } = await useFetch('/api/business/venues')
-const venues = computed(() => (venuesData.value as any)?.data || [])
+const employees = computed(() => (teamData.value as any)?.data || []);
 
-// Fetch Services for new appointment
-const { data: servicesData } = await useFetch('/api/business/services')
-const services = computed(() => (servicesData.value as any)?.data || [])
+const { data: venuesData } = await useFetch("/api/business/venues");
+const venues = computed(() => (venuesData.value as any)?.data || []);
 
-// Date range for fetching
-const startDateParam = computed(() => format(startOfMonth(currentDate.value), 'yyyy-MM-dd'))
-const endDateParam = computed(() => format(endOfMonth(currentDate.value), 'yyyy-MM-dd'))
+const { data: servicesData } = await useFetch("/api/business/services");
+const services = computed(() => (servicesData.value as any)?.data || []);
 
-// Fetch Bookings
-const { data: bookingsResponse, refresh: refreshBookings } = await useFetch('/api/business/bookings', {
-  query: {
-    startDate: startDateParam,
-    endDate: endDateParam,
-    limit: 500
-  },
-  watch: [currentDate]
-})
+const startDateParam = computed(() =>
+    format(startOfMonth(currentDate.value), "yyyy-MM-dd"),
+);
 
-const bookings = computed(() => (bookingsResponse.value as any)?.data || [])
+const endDateParam = computed(() =>
+    format(endOfMonth(currentDate.value), "yyyy-MM-dd"),
+);
 
-// Filtered Bookings
+const {
+    data: bookingsResponse,
+    refresh: refreshBookings,
+    pending,
+} = await useFetch("/api/business/bookings", {
+    query: {
+        startDate: startDateParam,
+        endDate: endDateParam,
+        limit: 500,
+    },
+    watch: [currentDate],
+});
+
+const bookings = computed(() => (bookingsResponse.value as any)?.data || []);
+
 const filteredBookings = computed(() => {
-  let filtered = bookings.value
+    let filtered = bookings.value;
 
-  if (selectedEmployeeId.value !== 'all') {
-    filtered = filtered.filter((b: any) =>
-      b.services.some((s: any) => s.employeeId === selectedEmployeeId.value)
-    )
-  }
+    if (selectedEmployeeId.value !== "all") {
+        filtered = filtered.filter((booking: any) =>
+            booking.services?.some(
+                (service: any) =>
+                    service.employeeId === selectedEmployeeId.value,
+            ),
+        );
+    }
 
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase()
-    filtered = filtered.filter((b: any) =>
-      b.user.fullName?.toLowerCase().includes(q) ||
-      b.services.some((s: any) => s.service.name.toLowerCase().includes(q))
-    )
-  }
+    if (searchQuery.value.trim()) {
+        const query = searchQuery.value.toLowerCase();
 
-  return filtered
-})
+        filtered = filtered.filter(
+            (booking: any) =>
+                booking.user?.fullName?.toLowerCase().includes(query) ||
+                booking.services?.some((service: any) =>
+                    service.service?.name?.toLowerCase().includes(query),
+                ),
+        );
+    }
 
-// Calendar Grid Logic
+    return filtered;
+});
+
 const calendarDays = computed(() => {
-  const start = startOfMonth(currentDate.value)
-  const end = endOfMonth(currentDate.value)
+    const start = startOfMonth(currentDate.value);
+    const end = endOfMonth(currentDate.value);
 
-  const calendarStart = startOfWeek(start)
-  const calendarEnd = endOfWeek(end)
+    const calendarStart = startOfWeek(start);
+    const calendarEnd = endOfWeek(end);
 
-  return eachDayOfInterval({
-    start: calendarStart,
-    end: calendarEnd
-  }).map(date => ({
-    date,
-    isCurrentMonth: isSameMonth(date, currentDate.value),
-    isToday: isToday(date),
-    bookings: filteredBookings.value.filter((b: any) => isSameDay(parseISO(b.date), date))
-  }))
-})
+    return eachDayOfInterval({
+        start: calendarStart,
+        end: calendarEnd,
+    }).map((date) => ({
+        date,
+        isCurrentMonth: isSameMonth(date, currentDate.value),
+        isToday: isToday(date),
+        bookings: filteredBookings.value.filter((booking: any) =>
+            isSameDay(parseISO(booking.date), date),
+        ),
+    }));
+});
 
-// UI State
-const isDetailsOpen = ref(false)
-const selectedBooking = ref<any>(null)
-const isNewAppointmentOpen = ref(false)
+const isDetailsOpen = ref(false);
+const selectedBooking = ref<any>(null);
+const isNewAppointmentOpen = ref(false);
+const isSubmitting = ref(false);
 
 const newAppt = ref({
-  venueId: '',
-  userEmail: '',
-  serviceId: '',
-  employeeId: '',
-  date: '',
-  startTime: '',
-  notes: ''
-})
+    venueId: "",
+    userEmail: "",
+    serviceId: "",
+    employeeId: "",
+    date: "",
+    startTime: "",
+    notes: "",
+});
 
-watch(venues, (newVenues) => {
-  if (newVenues.length > 0 && !newAppt.value.venueId) {
-    newAppt.value.venueId = newVenues[0].id
-  }
-}, { immediate: true })
+watch(
+    venues,
+    (newVenues) => {
+        if (newVenues.length > 0 && !newAppt.value.venueId) {
+            newAppt.value.venueId = newVenues[0].id;
+        }
+    },
+    { immediate: true },
+);
 
 const openBookingDetails = (booking: any) => {
-  selectedBooking.value = booking
-  isDetailsOpen.value = true
-}
+    selectedBooking.value = booking;
+    isDetailsOpen.value = true;
+};
 
 const updateBookingStatus = async (status: string) => {
-  if (!selectedBooking.value) return
+    if (!selectedBooking.value || isSubmitting.value) return;
 
-  try {
-    await $fetch(`/api/business/bookings/${selectedBooking.value.id}`, {
-      method: 'PATCH',
-      body: { status }
-    })
-    await refreshBookings()
-    isDetailsOpen.value = false
-  } catch (error) {
-    console.error('Failed to update status', error)
-  }
-}
+    isSubmitting.value = true;
+
+    try {
+        await $fetch(`/api/business/bookings/${selectedBooking.value.id}`, {
+            method: "PATCH",
+            body: { status },
+        });
+
+        await refreshBookings();
+        isDetailsOpen.value = false;
+    } catch (error) {
+        console.error("Failed to update status", error);
+    } finally {
+        isSubmitting.value = false;
+    }
+};
 
 const createNewAppointment = async () => {
-  try {
-    await $fetch('/api/business/bookings', {
-      method: 'POST',
-      body: newAppt.value
-    })
-    await refreshBookings()
-    isNewAppointmentOpen.value = false
-    // Reset form
-    newAppt.value = {
-      venueId: venues.value[0]?.id || '',
-      userEmail: '',
-      serviceId: '',
-      employeeId: '',
-      date: '',
-      startTime: '',
-      notes: ''
+    if (isSubmitting.value) return;
+
+    isSubmitting.value = true;
+
+    try {
+        await $fetch("/api/business/bookings", {
+            method: "POST",
+            body: newAppt.value,
+        });
+
+        await refreshBookings();
+
+        isNewAppointmentOpen.value = false;
+
+        newAppt.value = {
+            venueId: venues.value[0]?.id || "",
+            userEmail: "",
+            serviceId: "",
+            employeeId: "",
+            date: "",
+            startTime: "",
+            notes: "",
+        };
+    } catch (error: any) {
+        alert(error.data?.statusMessage || "Failed to create appointment");
+    } finally {
+        isSubmitting.value = false;
     }
-  } catch (error: any) {
-    alert(error.data?.statusMessage || 'Failed to create appointment')
-  }
-}
+};
 
-// Navigation
-const nextMonth = () => currentDate.value = addMonths(currentDate.value, 1)
-const prevMonth = () => currentDate.value = subMonths(currentDate.value, 1)
-const goToToday = () => currentDate.value = new Date()
+const nextMonth = () => {
+    currentDate.value = addMonths(currentDate.value, 1);
+};
 
-// Status colors
+const prevMonth = () => {
+    currentDate.value = subMonths(currentDate.value, 1);
+};
+
+const goToToday = () => {
+    currentDate.value = new Date();
+};
+
 const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'CONFIRMED': return 'bg-emerald-50 text-emerald-700 border-emerald-200'
-    case 'COMPLETED': return 'bg-blue-50 text-blue-700 border-blue-200'
-    case 'CANCELLED': return 'bg-rose-50 text-rose-700 border-rose-200'
-    case 'NO_SHOW': return 'bg-slate-50 text-slate-700 border-slate-200'
-    default: return 'bg-amber-50 text-amber-700 border-amber-200'
-  }
-}
+    switch (status?.toUpperCase()) {
+        case "CONFIRMED":
+            return "border-emerald-100 bg-emerald-50 text-emerald-700";
+        case "COMPLETED":
+            return "border-blue-100 bg-blue-50 text-blue-700";
+        case "CANCELLED":
+            return "border-rose-100 bg-rose-50 text-rose-700";
+        case "NO_SHOW":
+            return "border-slate-200 bg-slate-50 text-slate-600";
+        default:
+            return "border-amber-100 bg-amber-50 text-amber-700";
+    }
+};
+
+const statusOptions = ["CONFIRMED", "COMPLETED", "CANCELLED", "NO_SHOW"];
 </script>
 
 <template>
-  <div class="h-full flex flex-col space-y-6">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-3xl font-extrabold text-slate-900">Calendar</h1>
-        <p class="text-slate-500 font-medium">Manage your appointments and staff schedules.</p>
-      </div>
-      <div class="flex items-center gap-2">
-        <div class="bg-white border border-slate-200 rounded-xl p-1 flex">
-          <button
-            v-for="v in (['month', 'week', 'day'] as const)"
-            :key="v"
-            @click="view = v"
-            :class="['px-4 py-1.5 text-xs font-bold rounded-lg transition-all', view === v ? 'bg-primary text-white shadow-sm' : 'text-slate-500 hover:text-slate-700']"
-          >
-            {{ v.charAt(0).toUpperCase() + v.slice(1) }}
-          </button>
-        </div>
-        <UiButton label="New Appointment" :icon="Plus" class="!px-4" @click="isNewAppointmentOpen = true" />
-      </div>
-    </div>
-
-    <!-- Calendar Controls -->
-    <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-      <div class="flex items-center gap-4">
-        <h2 class="text-xl font-black text-slate-900 min-w-[200px] text-center sm:text-left">
-          {{ format(currentDate, 'MMMM yyyy') }}
-        </h2>
-        <div class="flex items-center gap-1">
-          <button @click="prevMonth" class="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors">
-            <ChevronLeft class="w-5 h-5" />
-          </button>
-          <button @click="goToToday" class="px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
-            Today
-          </button>
-          <button @click="nextMonth" class="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors">
-            <ChevronRight class="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-
-      <div class="flex items-center gap-3 w-full sm:w-auto">
-        <!-- Employee Filter -->
-        <div class="relative w-full sm:w-48">
-          <Filter class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <select
-            v-model="selectedEmployeeId"
-            class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none appearance-none cursor-pointer font-bold text-slate-700"
-          >
-            <option value="all">All Staff</option>
-            <option v-for="emp in employees" :key="emp.id" :value="emp.id">{{ emp.name }}</option>
-          </select>
-        </div>
-
-        <div class="relative flex-1 sm:w-64">
-          <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search bookings..."
-            class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all font-medium"
-          />
-        </div>
-      </div>
-    </div>
-
-    <!-- Calendar Grid (Month View) -->
-    <div v-if="view === 'month'" class="flex-1 bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden flex flex-col">
-      <div class="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50">
-        <div v-for="day in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']" :key="day" class="py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
-          {{ day }}
-        </div>
-      </div>
-
-      <div class="flex-1 grid grid-cols-7 auto-rows-fr overflow-y-auto">
+    <div class="space-y-8 pb-12">
         <div
-          v-for="cell in calendarDays"
-          :key="cell.date.toString()"
-          class="border-r border-b border-slate-50 p-2 min-h-[120px] hover:bg-slate-50/30 transition-colors group relative"
-          :class="[!cell.isCurrentMonth ? 'bg-slate-50/20 opacity-40' : '']"
+            class="flex flex-col gap-5 border-b border-slate-200 pb-7 md:flex-row md:items-end md:justify-between"
         >
-          <div class="flex justify-between items-center mb-2">
-            <span :class="['text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full', cell.isToday ? 'bg-primary text-white shadow-md shadow-primary/30' : 'text-slate-400 group-hover:text-slate-600']">
-              {{ format(cell.date, 'd') }}
-            </span>
+            <div>
+                <div
+                    class="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400"
+                >
+                    Business Operations
+                </div>
+
+                <h1
+                    class="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl"
+                >
+                    Calendar
+                </h1>
+
+                <p class="mt-1.5 text-sm text-slate-500">
+                    Manage appointments, staff schedules and bookings.
+                </p>
+            </div>
+
             <button
-              v-if="cell.isCurrentMonth"
-              @click="newAppt.date = format(cell.date, 'yyyy-MM-dd'); isNewAppointmentOpen = true"
-              class="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-200 rounded text-slate-400 transition-all"
+                type="button"
+                class="inline-flex h-10 items-center justify-center gap-2 bg-primary px-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:bg-slate-900"
+                @click="isNewAppointmentOpen = true"
             >
-              <Plus class="w-3 h-3" />
+                <Plus class="h-4 w-4" />
+                New Booking
             </button>
-          </div>
+        </div>
 
-          <div class="space-y-1">
+        <div v-if="pending" class="border border-slate-200 bg-white">
             <div
-              v-for="booking in cell.bookings"
-              :key="booking.id"
-              @click="openBookingDetails(booking)"
-              :class="[
-                'px-2 py-1 border-l-2 rounded text-[10px] font-bold truncate cursor-pointer transition-all hover:scale-[1.02] shadow-sm',
-                getStatusColor(booking.status)
-              ]"
+                class="flex h-16 items-center justify-center text-xs text-slate-400"
             >
-              {{ booking.startTime }} {{ booking.user.fullName }}
+                Loading calendar...
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div v-else class="flex-1 bg-white rounded-3xl border border-slate-100 shadow-sm flex items-center justify-center p-12 text-center text-slate-400">
-      <div>
-        <CalendarIcon class="w-12 h-12 mx-auto mb-4 opacity-20" />
-        <p class="font-bold">{{ view.charAt(0).toUpperCase() + view.slice(1) }} view is coming soon.</p>
-      </div>
-    </div>
-
-    <!-- Booking Details Slide-over -->
-    <UiSlideover
-      :show="isDetailsOpen"
-      title="Booking Details"
-      @close="isDetailsOpen = false"
-    >
-      <div v-if="selectedBooking" class="space-y-8">
-        <!-- Customer Info -->
-        <div class="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-          <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <User class="w-6 h-6 text-primary" />
-          </div>
-          <div class="overflow-hidden">
-            <h3 class="font-black text-slate-900 truncate">{{ selectedBooking.user.fullName }}</h3>
-            <p class="text-sm text-slate-500 font-medium truncate">{{ selectedBooking.user.email }}</p>
-          </div>
         </div>
 
-        <!-- Appointment Info -->
-        <div class="space-y-4">
-          <div class="flex items-center gap-3 text-slate-600">
-            <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
-              <CalendarIcon class="w-5 h-5" />
-            </div>
-            <div>
-              <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Date & Time</p>
-              <p class="text-sm font-bold text-slate-900">{{ format(parseISO(selectedBooking.date), 'EEEE, MMMM do') }} @ {{ selectedBooking.startTime }}</p>
-            </div>
-          </div>
-
-          <div class="flex items-center gap-3 text-slate-600">
-            <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
-              <Clock class="w-5 h-5" />
-            </div>
-            <div>
-              <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Duration & Price</p>
-              <p class="text-sm font-bold text-slate-900">{{ selectedBooking.durationTotal }} min • R{{ selectedBooking.priceTotal }}</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Services -->
-        <div>
-          <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Services</h4>
-          <div class="space-y-2">
+        <div v-else class="overflow-hidden border border-slate-200 bg-white">
             <div
-              v-for="bs in selectedBooking.services"
-              :key="bs.id"
-              class="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-sm"
+                class="flex flex-col gap-5 border-b border-slate-200 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between"
             >
-              <div>
-                <p class="text-sm font-bold text-slate-900">{{ bs.service.name }}</p>
-                <p v-if="bs.employee" class="text-xs text-slate-500 font-medium">with {{ bs.employee.name }}</p>
-              </div>
-              <p class="text-sm font-black text-slate-900">R{{ bs.price }}</p>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button
+                        type="button"
+                        @click="prevMonth"
+                        class="flex h-9 w-9 items-center justify-center border border-slate-200 bg-white text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                        aria-label="Previous month"
+                    >
+                        <ChevronLeft class="h-4 w-4" />
+                    </button>
+
+                    <button
+                        type="button"
+                        @click="goToToday"
+                        class="h-9 border border-slate-200 bg-white px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                    >
+                        Today
+                    </button>
+
+                    <button
+                        type="button"
+                        @click="nextMonth"
+                        class="flex h-9 w-9 items-center justify-center border border-slate-200 bg-white text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                        aria-label="Next month"
+                    >
+                        <ChevronRight class="h-4 w-4" />
+                    </button>
+
+                    <div class="ml-1 border-l border-slate-200 pl-4">
+                        <h2
+                            class="text-sm font-semibold text-slate-950 sm:text-base"
+                        >
+                            {{ format(currentDate, "MMMM yyyy") }}
+                        </h2>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <div class="flex border border-slate-200 bg-white">
+                        <button
+                            v-for="option in ['month', 'week', 'day'] as const"
+                            :key="option"
+                            type="button"
+                            @click="view = option"
+                            :class="[
+                                'h-9 px-3 text-[10px] font-semibold uppercase tracking-[0.1em] transition-colors',
+                                view === option
+                                    ? 'bg-primary text-white'
+                                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900',
+                            ]"
+                        >
+                            {{ option }}
+                        </button>
+                    </div>
+
+                    <div class="relative w-full sm:w-52">
+                        <Filter
+                            class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
+                        />
+
+                        <select
+                            v-model="selectedEmployeeId"
+                            class="h-9 w-full appearance-none border border-slate-200 bg-white pl-9 pr-8 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-600 outline-none transition-colors focus:border-primary/30"
+                        >
+                            <option value="all">All Staff</option>
+
+                            <option
+                                v-for="employee in employees"
+                                :key="employee.id"
+                                :value="employee.id"
+                            >
+                                {{ employee.name }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="relative w-full sm:w-56">
+                        <Search
+                            class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
+                        />
+
+                        <input
+                            v-model="searchQuery"
+                            type="text"
+                            placeholder="Search bookings"
+                            class="h-9 w-full border border-slate-200 bg-white pl-9 pr-3 text-xs text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-primary/30"
+                        />
+                    </div>
+                </div>
             </div>
-          </div>
-        </div>
 
-        <!-- Notes -->
-        <div v-if="selectedBooking.notes">
-          <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Notes</h4>
-          <p class="text-sm font-medium text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
-            {{ selectedBooking.notes }}
-          </p>
-        </div>
+            <div v-if="view === 'month'" class="overflow-x-auto">
+                <div class="min-w-[760px]">
+                    <div
+                        class="grid grid-cols-7 border-b border-slate-200 bg-slate-50"
+                    >
+                        <div
+                            v-for="day in [
+                                'Sun',
+                                'Mon',
+                                'Tue',
+                                'Wed',
+                                'Thu',
+                                'Fri',
+                                'Sat',
+                            ]"
+                            :key="day"
+                            class="border-r border-slate-200 px-3 py-3 text-left text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400 last:border-r-0"
+                        >
+                            {{ day }}
+                        </div>
+                    </div>
 
-        <!-- Actions -->
-        <div>
-          <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Update Status</h4>
-          <div class="grid grid-cols-2 gap-2">
-            <button
-              v-for="status in ['CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW']"
-              :key="status"
-              @click="updateBookingStatus(status)"
-              :class="[
-                'px-4 py-3 rounded-xl text-xs font-black transition-all border',
-                selectedBooking.status === status
-                  ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20'
-                  : 'bg-white border-slate-100 text-slate-600 hover:border-primary/30 hover:bg-slate-50'
-              ]"
-            >
-              {{ status }}
-            </button>
-          </div>
-        </div>
-      </div>
+                    <div class="grid grid-cols-7 auto-rows-fr">
+                        <div
+                            v-for="cell in calendarDays"
+                            :key="cell.date.toString()"
+                            class="group min-h-[135px] border-b border-r border-slate-200 p-3 transition-colors hover:bg-slate-50/70"
+                            :class="[
+                                !cell.isCurrentMonth
+                                    ? 'bg-slate-50/50'
+                                    : 'bg-white',
+                            ]"
+                        >
+                            <div class="mb-3 flex items-center justify-between">
+                                <span
+                                    :class="[
+                                        'flex h-7 w-7 items-center justify-center text-xs font-semibold',
+                                        cell.isToday
+                                            ? 'bg-primary text-white'
+                                            : cell.isCurrentMonth
+                                              ? 'text-slate-700'
+                                              : 'text-slate-300',
+                                    ]"
+                                >
+                                    {{ format(cell.date, "d") }}
+                                </span>
 
-      <template #footer>
-        <div class="flex gap-3">
-          <UiButton label="Close" type="secondary" class="flex-1" @click="isDetailsOpen = false" />
-        </div>
-      </template>
-    </UiSlideover>
+                                <button
+                                    v-if="cell.isCurrentMonth"
+                                    type="button"
+                                    class="flex h-7 w-7 items-center justify-center border border-transparent text-slate-300 opacity-0 transition-all hover:border-slate-200 hover:bg-white hover:text-primary group-hover:opacity-100"
+                                    @click="
+                                        newAppt.date = format(
+                                            cell.date,
+                                            'yyyy-MM-dd',
+                                        );
+                                        isNewAppointmentOpen = true;
+                                    "
+                                    aria-label="Add booking"
+                                >
+                                    <Plus class="h-3.5 w-3.5" />
+                                </button>
+                            </div>
 
-    <!-- New Appointment Slide-over -->
-    <UiSlideover
-      :show="isNewAppointmentOpen"
-      title="New Appointment"
-      @close="isNewAppointmentOpen = false"
-    >
-      <form @submit.prevent="createNewAppointment" class="space-y-6">
-        <div class="space-y-5">
-          <!-- Venue Selection -->
-          <div v-if="venues.length > 1">
-            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Venue</label>
-            <select
-              v-model="newAppt.venueId"
-              class="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none appearance-none font-bold text-slate-700"
-              required
-            >
-              <option v-for="v in venues" :key="v.id" :value="v.id">{{ v.name }}</option>
-            </select>
-          </div>
+                            <div class="space-y-1">
+                                <button
+                                    v-for="booking in cell.bookings.slice(0, 4)"
+                                    :key="booking.id"
+                                    type="button"
+                                    class="block w-full border px-2 py-1.5 text-left transition-colors hover:border-slate-300 hover:bg-slate-50"
+                                    :class="getStatusColor(booking.status)"
+                                    @click="openBookingDetails(booking)"
+                                >
+                                    <div
+                                        class="truncate text-[9px] font-semibold"
+                                    >
+                                        {{ booking.startTime }}
+                                        {{
+                                            booking.user?.fullName ||
+                                            "Anonymous Client"
+                                        }}
+                                    </div>
+                                </button>
 
-          <!-- Customer Email -->
-          <div>
-            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Customer Email</label>
-            <div class="relative">
-              <User class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                v-model="newAppt.userEmail"
-                type="email"
-                placeholder="customer@example.com"
-                class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none font-medium"
-                required
-              />
+                                <button
+                                    v-if="cell.bookings.length > 4"
+                                    type="button"
+                                    class="w-full pt-1 text-center text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400 hover:text-primary"
+                                    @click="
+                                        openBookingDetails(cell.bookings[4])
+                                    "
+                                >
+                                    +{{ cell.bookings.length - 4 }}
+                                    more
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <p class="mt-1 text-[10px] text-slate-400 font-bold uppercase tracking-tight">Customer must have an account</p>
-          </div>
 
-          <!-- Service Selection -->
-          <div>
-            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Service</label>
-            <select
-              v-model="newAppt.serviceId"
-              class="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none appearance-none font-bold text-slate-700"
-              required
+            <div
+                v-else
+                class="flex min-h-[520px] flex-col items-center justify-center border-t border-slate-200 px-6 text-center"
             >
-              <option value="">Select a service</option>
-              <option v-for="s in services" :key="s.id" :value="s.id">{{ s.name }} (R{{ s.price }})</option>
-            </select>
-          </div>
+                <div
+                    class="mb-5 flex h-12 w-12 items-center justify-center border border-slate-200 bg-slate-50"
+                >
+                    <CalendarIcon class="h-5 w-5 text-slate-300" />
+                </div>
 
-          <!-- Employee Selection -->
-          <div>
-            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Employee (Optional)</label>
-            <select
-              v-model="newAppt.employeeId"
-              class="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none appearance-none font-bold text-slate-700"
+                <h3 class="text-sm font-semibold text-slate-900">
+                    {{ view === "week" ? "Week" : "Day" }} view
+                </h3>
+
+                <p class="mt-1 max-w-sm text-xs leading-relaxed text-slate-400">
+                    This calendar view is not available yet. Month view remains
+                    available for managing bookings.
+                </p>
+
+                <button
+                    type="button"
+                    class="mt-5 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary hover:text-slate-900"
+                    @click="view = 'month'"
+                >
+                    Return to month view
+                </button>
+            </div>
+        </div>
+
+        <UiSlideover
+            :show="isDetailsOpen"
+            title="Booking Details"
+            @close="isDetailsOpen = false"
+        >
+            <div v-if="selectedBooking" class="space-y-7">
+                <div
+                    class="flex items-center gap-4 border border-slate-200 bg-slate-50 p-5"
+                >
+                    <div
+                        class="flex h-11 w-11 shrink-0 items-center justify-center border border-slate-200 bg-white text-sm font-semibold text-primary"
+                    >
+                        {{ selectedBooking.user?.fullName?.[0] || "C" }}
+                    </div>
+
+                    <div class="min-w-0">
+                        <h3
+                            class="truncate text-sm font-semibold text-slate-950"
+                        >
+                            {{
+                                selectedBooking.user?.fullName ||
+                                "Anonymous Client"
+                            }}
+                        </h3>
+
+                        <p class="mt-1 truncate text-xs text-slate-400">
+                            {{ selectedBooking.user?.email }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <div
+                        class="flex items-center gap-4 border border-slate-200 p-4"
+                    >
+                        <div
+                            class="flex h-9 w-9 shrink-0 items-center justify-center border border-slate-200 bg-slate-50 text-slate-500"
+                        >
+                            <CalendarIcon class="h-4 w-4" />
+                        </div>
+
+                        <div>
+                            <p
+                                class="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400"
+                            >
+                                Date & Time
+                            </p>
+
+                            <p
+                                class="mt-1 text-xs font-semibold text-slate-900"
+                            >
+                                {{
+                                    format(
+                                        parseISO(selectedBooking.date),
+                                        "EEEE, MMMM d, yyyy",
+                                    )
+                                }}
+                                ·
+                                {{ selectedBooking.startTime }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div
+                        class="flex items-center gap-4 border border-slate-200 p-4"
+                    >
+                        <div
+                            class="flex h-9 w-9 shrink-0 items-center justify-center border border-slate-200 bg-slate-50 text-slate-500"
+                        >
+                            <Clock class="h-4 w-4" />
+                        </div>
+
+                        <div>
+                            <p
+                                class="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400"
+                            >
+                                Duration & Total
+                            </p>
+
+                            <p
+                                class="mt-1 text-xs font-semibold text-slate-900"
+                            >
+                                {{ selectedBooking.durationTotal }}
+                                mins · R{{
+                                    Number(
+                                        selectedBooking.priceTotal || 0,
+                                    ).toLocaleString()
+                                }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div
+                        class="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                    >
+                        Services
+                    </div>
+
+                    <div
+                        class="divide-y divide-slate-200 border border-slate-200"
+                    >
+                        <div
+                            v-for="bookingService in selectedBooking.services"
+                            :key="bookingService.id"
+                            class="flex items-center justify-between gap-4 p-4"
+                        >
+                            <div class="flex min-w-0 items-center gap-3">
+                                <div
+                                    class="flex h-8 w-8 shrink-0 items-center justify-center border border-slate-200 bg-slate-50 text-slate-400"
+                                >
+                                    <Layers class="h-3.5 w-3.5" />
+                                </div>
+
+                                <div class="min-w-0">
+                                    <p
+                                        class="truncate text-xs font-semibold text-slate-900"
+                                    >
+                                        {{ bookingService.service?.name }}
+                                    </p>
+
+                                    <p
+                                        v-if="bookingService.employee"
+                                        class="mt-1 text-[9px] uppercase tracking-[0.08em] text-slate-400"
+                                    >
+                                        {{ bookingService.employee.name }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <span
+                                class="shrink-0 text-xs font-semibold text-slate-900"
+                            >
+                                R{{
+                                    Number(
+                                        bookingService.price || 0,
+                                    ).toLocaleString()
+                                }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="selectedBooking.notes">
+                    <div
+                        class="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                    >
+                        Notes
+                    </div>
+
+                    <div
+                        class="border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed text-slate-600"
+                    >
+                        {{ selectedBooking.notes }}
+                    </div>
+                </div>
+
+                <div>
+                    <div
+                        class="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                    >
+                        Update Status
+                    </div>
+
+                    <div
+                        class="grid grid-cols-2 gap-px border border-slate-200 bg-slate-200"
+                    >
+                        <button
+                            v-for="status in statusOptions"
+                            :key="status"
+                            type="button"
+                            :disabled="isSubmitting"
+                            :class="[
+                                'bg-white px-3 py-3 text-[9px] font-semibold uppercase tracking-[0.08em] transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+                                selectedBooking.status === status
+                                    ? 'bg-primary text-white'
+                                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900',
+                            ]"
+                            @click="updateBookingStatus(status)"
+                        >
+                            {{ status.replace("_", " ") }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <template #footer>
+                <div class="border-t border-slate-200 p-6">
+                    <UiButton
+                        label="Close"
+                        type="outline"
+                        class="w-full !py-3"
+                        @click="isDetailsOpen = false"
+                    />
+                </div>
+            </template>
+        </UiSlideover>
+
+        <UiSlideover
+            :show="isNewAppointmentOpen"
+            title="New Booking"
+            @close="isNewAppointmentOpen = false"
+        >
+            <form
+                id="manual-appointment-form"
+                class="space-y-6"
+                @submit.prevent="createNewAppointment"
             >
-              <option value="">Any Staff</option>
-              <option v-for="emp in employees" :key="emp.id" :value="emp.id">{{ emp.name }}</option>
-            </select>
-          </div>
+                <div v-if="venues.length > 1" class="space-y-2">
+                    <label
+                        class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400"
+                    >
+                        Venue
+                    </label>
 
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Date</label>
-              <input
-                v-model="newAppt.date"
-                type="date"
-                class="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none font-bold text-slate-700"
-                required
-              />
-            </div>
-            <div>
-              <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Time</label>
-              <input
-                v-model="newAppt.startTime"
-                type="time"
-                class="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none font-bold text-slate-700"
-                required
-              />
-            </div>
-          </div>
+                    <select
+                        v-model="newAppt.venueId"
+                        required
+                        class="h-11 w-full appearance-none border border-slate-200 bg-white px-3 text-xs text-slate-900 outline-none focus:border-primary/30"
+                    >
+                        <option
+                            v-for="venue in venues"
+                            :key="venue.id"
+                            :value="venue.id"
+                        >
+                            {{ venue.name }}
+                        </option>
+                    </select>
+                </div>
 
-          <!-- Notes -->
-          <div>
-            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Notes</label>
-            <textarea
-              v-model="newAppt.notes"
-              rows="3"
-              class="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none font-medium resize-none"
-              placeholder="Any special requests?"
-            ></textarea>
-          </div>
-        </div>
+                <div class="space-y-2">
+                    <label
+                        class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400"
+                    >
+                        Client Email
+                    </label>
 
-        <div class="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3">
-          <AlertCircle class="w-5 h-5 text-amber-500 shrink-0" />
-          <p class="text-[10px] font-bold text-amber-700 leading-relaxed uppercase tracking-tight">
-            Manual entry will bypass online payment requirements. The booking will be marked as CONFIRMED automatically.
-          </p>
-        </div>
-      </form>
+                    <input
+                        v-model="newAppt.userEmail"
+                        type="email"
+                        placeholder="client@example.com"
+                        required
+                        class="h-11 w-full border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-primary/30"
+                    />
 
-      <template #footer>
-        <div class="flex gap-3">
-          <UiButton label="Cancel" type="secondary" class="flex-1" @click="isNewAppointmentOpen = false" />
-          <UiButton label="Create Appointment" class="flex-1" @click="createNewAppointment" />
-        </div>
-      </template>
+                    <p class="text-[10px] leading-relaxed text-slate-400">
+                        The client must already have an account.
+                    </p>
+                </div>
 
-    </UiSlideover>
-  </div>
+                <div class="space-y-2">
+                    <label
+                        class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400"
+                    >
+                        Service
+                    </label>
+
+                    <select
+                        v-model="newAppt.serviceId"
+                        required
+                        class="h-11 w-full appearance-none border border-slate-200 bg-white px-3 text-xs text-slate-900 outline-none focus:border-primary/30"
+                    >
+                        <option value="">Select service</option>
+
+                        <option
+                            v-for="service in services"
+                            :key="service.id"
+                            :value="service.id"
+                        >
+                            {{ service.name }} · R{{
+                                Number(service.price || 0).toLocaleString()
+                            }}
+                        </option>
+                    </select>
+                </div>
+
+                <div class="space-y-2">
+                    <label
+                        class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400"
+                    >
+                        Staff Member
+                    </label>
+
+                    <select
+                        v-model="newAppt.employeeId"
+                        class="h-11 w-full appearance-none border border-slate-200 bg-white px-3 text-xs text-slate-900 outline-none focus:border-primary/30"
+                    >
+                        <option value="">Automatic assignment</option>
+
+                        <option
+                            v-for="employee in employees"
+                            :key="employee.id"
+                            :value="employee.id"
+                        >
+                            {{ employee.name }}
+                        </option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-2">
+                        <label
+                            class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400"
+                        >
+                            Date
+                        </label>
+
+                        <input
+                            v-model="newAppt.date"
+                            type="date"
+                            required
+                            class="h-11 w-full border border-slate-200 bg-white px-3 text-xs text-slate-900 outline-none focus:border-primary/30"
+                        />
+                    </div>
+
+                    <div class="space-y-2">
+                        <label
+                            class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400"
+                        >
+                            Start Time
+                        </label>
+
+                        <input
+                            v-model="newAppt.startTime"
+                            type="time"
+                            required
+                            class="h-11 w-full border border-slate-200 bg-white px-3 text-xs text-slate-900 outline-none focus:border-primary/30"
+                        />
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label
+                        class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400"
+                    >
+                        Notes
+                    </label>
+
+                    <textarea
+                        v-model="newAppt.notes"
+                        rows="4"
+                        placeholder="Optional booking notes..."
+                        class="w-full resize-none border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-primary/30"
+                    />
+                </div>
+
+                <div class="flex gap-3 border border-amber-100 bg-amber-50 p-4">
+                    <AlertCircle class="h-4 w-4 shrink-0 text-amber-500" />
+
+                    <p class="text-[10px] leading-relaxed text-amber-700">
+                        Manual bookings bypass standard payment validation and
+                        are created as confirmed operational bookings.
+                    </p>
+                </div>
+            </form>
+
+            <template #footer>
+                <div class="flex gap-3">
+                    <UiButton
+                        label="Cancel"
+                        type="outline"
+                        class="flex-1 !py-3"
+                        :disabled="isSubmitting"
+                        @click="isNewAppointmentOpen = false"
+                    />
+
+                    <UiButton
+                        label="Create Booking"
+                        type="submit"
+                        form="manual-appointment-form"
+                        class="flex-[2] !py-3"
+                        :loading="isSubmitting"
+                    />
+                </div>
+            </template>
+        </UiSlideover>
+    </div>
 </template>
 
+<style scoped>
+:deep(.overflow-y-auto::-webkit-scrollbar) {
+    width: 6px;
+}
+
+:deep(.overflow-y-auto::-webkit-scrollbar-track) {
+    background: transparent;
+}
+
+:deep(.overflow-y-auto::-webkit-scrollbar-thumb) {
+    background: #cbd5e1;
+}
+</style>

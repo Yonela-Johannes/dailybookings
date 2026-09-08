@@ -1,35 +1,11 @@
 <script setup lang="ts">
-import {
-    ArrowUpRight,
-    Sparkles,
-    Scissors,
-    HeartPulse,
-    Dumbbell,
-    Camera,
-    GraduationCap,
-    House,
-    BriefcaseBusiness,
-} from "lucide-vue-next";
+import { ArrowUpRight } from "lucide-vue-next";
 import { NAVIGATION_PATHS } from "~/utils/constants";
 
 const { data: discovery, pending } = await useDiscovery();
 
-const ICON_MAP: Record<string, any> = {
-    sparkles: Sparkles,
-    scissors: Scissors,
-    "heart-pulse": HeartPulse,
-    dumbbell: Dumbbell,
-    camera: Camera,
-    "graduation-cap": GraduationCap,
-    house: House,
-    "briefcase-business": BriefcaseBusiness,
-};
-
-const fallbackImage =
-    "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1200&q=85";
-
-const popularCategories = computed(
-    () => discovery.value?.popularCategories || [],
+const popularCategories = computed(() =>
+    (discovery.value?.popularCategories || []).slice(0, 4),
 );
 </script>
 
@@ -47,7 +23,7 @@ const popularCategories = computed(
                     </p>
 
                     <h2
-                        class="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl"
+                        class="text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-4xl"
                     >
                         Popular categories
                     </h2>
@@ -62,7 +38,7 @@ const popularCategories = computed(
 
                 <NuxtLink
                     :to="NAVIGATION_PATHS.DISCOVER"
-                    class="group inline-flex h-10 w-fit shrink-0 items-center gap-2 border border-slate-200 px-4 text-sm font-semibold text-slate-900 transition-colors hover:border-slate-950 hover:bg-slate-950 hover:text-white"
+                    class="group inline-flex h-10 w-fit shrink-0 items-center gap-2 border border-slate-200 px-4 text-sm font-medium text-slate-900 transition-all duration-200 hover:border-slate-950 hover:bg-slate-950 hover:text-white"
                 >
                     View all categories
 
@@ -75,58 +51,79 @@ const popularCategories = computed(
 
             <div
                 v-if="pending"
-                class="mt-10 grid grid-cols-2 gap-px overflow-hidden border border-slate-200 bg-slate-200 sm:grid-cols-3 lg:grid-cols-4"
+                class="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
             >
                 <div
-                    v-for="i in 8"
+                    v-for="i in 4"
                     :key="i"
-                    class="aspect-[4/5] animate-pulse bg-slate-100"
+                    class="aspect-[4/5] animate-pulse rounded-lg bg-slate-100"
                 />
             </div>
 
-            <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div
+                v-else-if="popularCategories.length"
+                class="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
+            >
                 <NuxtLink
                     v-for="category in popularCategories"
                     :key="category.slug"
                     :to="NAVIGATION_PATHS.CATEGORY(category.slug)"
-                    class="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary hover:shadow-xl"
+                    class="group relative aspect-[4/5] overflow-hidden rounded-lg bg-slate-100"
                 >
-                    <div
-                        class="absolute right-0 top-0 h-32 w-32 translate-x-10 -translate-y-10 rounded-full bg-primary/5 transition-transform duration-500 group-hover:scale-125"
-                    />
-
                     <img
-                        :src="category.imageUrl || fallbackImage"
+                        :src="category.imageUrl"
                         :alt="category.name"
                         loading="lazy"
-                        class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+                        class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.05]"
                     />
-                    <div class="relative mt-6">
+
+                    <div
+                        class="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent opacity-90 transition-opacity duration-300 group-hover:opacity-100"
+                    />
+
+                    <div class="absolute inset-x-0 bottom-0 p-5 sm:p-6">
+                        <div
+                            class="mb-3 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/65"
+                        >
+                            {{ category._count?.venues || 0 }} venues
+                        </div>
+
                         <h3
-                            class="text-xl font-semibold tracking-tight text-slate-950"
+                            class="text-lg font-semibold tracking-[-0.02em] text-white sm:text-xl"
                         >
                             {{ category.name }}
                         </h3>
 
                         <p
                             v-if="category.description"
-                            class="mt-2 line-clamp-2 text-sm leading-6 text-slate-500"
+                            class="mt-1.5 line-clamp-2 text-xs leading-5 text-white/70 sm:text-sm"
                         >
                             {{ category.description }}
                         </p>
 
-                        <div class="mt-5 flex items-center justify-between">
-                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                {{ category._count?.venues || 0 }} Venues
-                            </div>
-                            <div
-                                class="flex h-9 w-9 items-center justify-center rounded-full text-slate-200 border border-slate-200 transition-all duration-300 group-hover:border-primary group-hover:bg-primary group-hover:text-white"
-                            >
-                                <ArrowUpRight class="h-4 w-4" />
-                            </div>
+                        <div
+                            class="mt-4 flex h-8 w-8 items-center justify-center border border-white/30 bg-white/10 text-white backdrop-blur-sm transition-all duration-300 group-hover:border-white group-hover:bg-white group-hover:text-slate-950"
+                        >
+                            <ArrowUpRight
+                                class="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                                stroke-width="1.8"
+                            />
                         </div>
                     </div>
                 </NuxtLink>
+            </div>
+
+            <div
+                v-else
+                class="mt-10 border border-slate-200 px-6 py-12 text-center"
+            >
+                <p class="text-sm font-medium text-slate-900">
+                    No categories available yet.
+                </p>
+
+                <p class="mt-1 text-sm text-slate-500">
+                    Check back soon for more local services.
+                </p>
             </div>
         </div>
     </section>

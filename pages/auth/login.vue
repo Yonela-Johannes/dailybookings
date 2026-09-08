@@ -43,7 +43,7 @@ async function handleLogin() {
     error.value = "";
 
     try {
-        const { error: authError, data } = await login({
+        const { error: authError } = await login({
             email: email.value.trim(),
             password: password.value,
         });
@@ -54,8 +54,16 @@ async function handleLogin() {
             return;
         }
 
-        // Wait for dbUser to be populated (login calls syncUser which sets dbUser)
-        // The watchEffect above will handle the navigation once dbUser is present.
+        // The watchEffect will handle navigation once dbUser is populated.
+        // We'll add a timeout just in case sync fails silently
+        setTimeout(() => {
+          if (loading.value) {
+            loading.value = false;
+            if (!dbUser.value) {
+              error.value = "Authentication successful, but we couldn't load your profile. Please refresh.";
+            }
+          }
+        }, 5000);
     } catch (err: any) {
         error.value = "An unexpected error occurred. Please try again.";
         loading.value = false;
