@@ -5,8 +5,11 @@ import { NAVIGATION_PATHS } from "~/utils/constants";
 const { data: discovery, pending } = await useDiscovery();
 
 const popularCategories = computed(() =>
-    (discovery.value?.popularCategories || []).slice(0, 4),
+  (discovery.value?.popularCategories || [])
+    .filter(category => category?.status?.toLowerCase() === 'active')
+    .slice(0, 4)
 );
+
 </script>
 
 <template>

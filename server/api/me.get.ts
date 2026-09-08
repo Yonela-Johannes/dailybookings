@@ -66,6 +66,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    console.log(`API /me: Returning user ${userData.email} with role ${userData.role}`);
     return userData;
   } catch (error: any) {
     if (error.statusCode) throw error;

@@ -28,9 +28,9 @@ export function useAuth() {
       console.log(`fetchDbUser: calling /api/me... Client: ${import.meta.client}`);
       const data = await fetcher("/api/me", {
         headers,
-        // Ensure we don't cache 401s
         key: `me-${Date.now()}`
       } as any);
+      console.log(`fetchDbUser: success! Role: ${data.role}`);
       dbUser.value = data;
       return data;
     } catch (err: any) {

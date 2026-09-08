@@ -6,8 +6,8 @@ const updateBlogSchema = z.object({
   title: z.string().min(5).optional(),
   slug: z.string().min(2).optional(),
   content: z.string().min(10).optional(),
-  excerpt: z.string().optional(),
-  featuredImage: z.string().url().optional(),
+  excerpt: z.string().optional().nullable().transform(v => !v || v === '' ? null : v),
+  featuredImage: z.string().url().optional().nullable().or(z.literal('')).transform(v => !v || v === '' ? null : v),
   categoryId: z.string().uuid().optional(),
   published: z.boolean().optional()
 })

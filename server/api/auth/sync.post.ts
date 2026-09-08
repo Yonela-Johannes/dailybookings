@@ -29,35 +29,63 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const existingUser = await prisma.user.findUnique({
+    // 1. Try to find the user by Supabase ID
+    let dbUser = await prisma.user.findUnique({
       where: { id: data.id }
     })
+
+    // 2. If not found, try by Email (migration/seed scenario)
+    if (!dbUser) {
+      const existingByEmail = await prisma.user.findUnique({
+        where: { email: data.email }
+      })
+
+      if (existingByEmail) {
+        // Migration: Update the existing user record with the new Supabase ID
+        // Note: Prisma doesn't support updating the ID field directly in a simple way.
+        // We have to delete and recreate, or use a raw query.
+        // Since we want to preserve relations, let's use a raw query to update the ID.
+        await prisma.$executeRawUnsafe(
+          `UPDATE "User" SET "id" = $1 WHERE "id" = $2`,
+          data.id,
+          existingByEmail.id
+        )
+
+        // Now fetch it again with the new ID
+        dbUser = await prisma.user.findUnique({
+          where: { id: data.id }
+        })
+      }
+    }
 
     const updateData: any = {
       email: data.email,
       fullName: data.fullName,
     }
 
+    // Role Handling
     if (data.role) {
-      if (data.role === 'PLATFORM_ADMIN') {
-        if (!existingUser || existingUser.role !== 'PLATFORM_ADMIN') {
-           updateData.role = 'CUSTOMER'
+      if (dbUser) {
+        if (dbUser.role === 'PLATFORM_ADMIN') {
+          updateData.role = 'PLATFORM_ADMIN'
+        } else if (data.role === 'PLATFORM_ADMIN') {
+          updateData.role = 'PLATFORM_ADMIN'
         } else {
-           updateData.role = 'PLATFORM_ADMIN'
+          updateData.role = data.role
         }
       } else {
         updateData.role = data.role
       }
     }
 
-    const dbUser = await prisma.user.upsert({
+    dbUser = await prisma.user.upsert({
       where: { id: data.id },
       update: updateData,
       create: {
         id: data.id,
         email: data.email,
         fullName: data.fullName,
-        role: (data.role === 'PLATFORM_ADMIN') ? 'CUSTOMER' : (data.role || 'CUSTOMER')
+        role: data.role || 'CUSTOMER'
       }
     })
 

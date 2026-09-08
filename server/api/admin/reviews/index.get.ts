@@ -3,9 +3,9 @@ import { isPlatformAdmin } from '~/server/utils/auth'
 import { z } from 'zod'
 
 const querySchema = z.object({
-  page: z.string().optional().transform(v => parseInt(v || '1')),
-  limit: z.string().optional().transform(v => parseInt(v || '20')),
-  venueId: z.string().uuid().optional(),
+  page: z.string().optional().transform(v => v ? parseInt(v) : 1),
+  limit: z.string().optional().transform(v => v ? parseInt(v) : 20),
+  venueId: z.string().uuid().optional().transform(v => v === '' ? undefined : v),
   rating: z.string().optional().transform(v => v ? parseInt(v) : undefined)
 })
 

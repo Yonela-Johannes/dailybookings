@@ -1,25 +1,15 @@
 <script setup lang="ts">
-interface Category {
-    name: string;
-    imageUrl: string;
-    available?: boolean;
-}
+const { data: discovery, pending } = await useDiscovery();
 
-const props = withDefaults(
-    defineProps<{
-        categories: Category[];
-        heading?: string;
-        duration?: number;
-    }>(),
-    {
-        heading: "What are you looking for today?",
-        duration: 32,
-    },
-);
+const loopedCategories = computed(() => {
+    return (discovery.value?.popularCategories || []).filter(
+        (category) => category?.status?.toLowerCase() === "active",
+    );
+});
 
-const loopedCategories = computed(() => [
-    ...props.categories,
-    ...props.categories,
+const marqueeCategories = computed(() => [
+    ...loopedCategories.value,
+    ...loopedCategories.value,
 ]);
 
 const tiltClasses = [
@@ -47,7 +37,8 @@ function tapeFor(index: number) {
         aria-label="Browse service categories"
         class="w-full overflow-hidden py-14 md:py-20"
     >
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+            <!-- Heading -->
             <div class="mb-8 md:mb-10">
                 <p
                     class="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-primary"
@@ -58,82 +49,94 @@ function tapeFor(index: number) {
                 <h2
                     class="font-caveat text-3xl font-bold leading-tight tracking-tight text-slate-950 md:text-4xl"
                 >
-                    {{ heading }}
+                    What are you looking for today?
                 </h2>
             </div>
-        </div>
 
-        <div class="relative w-full overflow-hidden">
-            <div class="category-marquee">
+            <!-- Marquee -->
+            <div class="relative w-full overflow-hidden py-5">
                 <div
-                    class="category-track flex w-max gap-5 pr-5 md:gap-6 md:pr-6"
-                    :style="{ '--marquee-duration': `${duration}s` }"
+                    v-if="!pending && loopedCategories.length"
+                    class="category-marquee"
                 >
-                    <a
-                        v-for="(category, index) in loopedCategories"
-                        :key="`${category.name}-${index}`"
-                        href="#"
-                        :aria-hidden="
-                            index >= props.categories.length
-                                ? 'true'
-                                : undefined
-                        "
-                        :tabindex="index >= props.categories.length ? -1 : 0"
-                        class="category-card group relative block w-[180px] shrink-0 rounded-sm bg-[#f7f2e7] p-3 pb-4 text-[#2b2015] no-underline shadow-[0_2px_10px_rgba(0,0,0,0.06)] transition-transform duration-300 ease-out hover:z-30 hover:-translate-y-2 hover:scale-[1.035] hover:rotate-0 focus-visible:z-30 focus-visible:-translate-y-2 focus-visible:scale-[1.035] focus-visible:rotate-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary md:w-[230px]"
-                        :class="tiltFor(index)"
+                    <div
+                        class="category-track flex w-max gap-5 md:gap-6"
+                        :style="{
+                            '--marquee-duration': '32s',
+                        }"
                     >
-                        <!-- Tape -->
-                        <span
-                            class="absolute -top-3 left-1/2 z-20 h-[26px] w-16 -translate-x-1/2 rotate-[-4deg] rounded-[1px] opacity-90 shadow-[0_2px_4px_rgba(0,0,0,.2)]"
-                            :class="tapeFor(index)"
-                        />
-
-                        <div
-                            class="relative aspect-[4/3] w-full overflow-hidden rounded-[1px] bg-[#ddd6c6]"
+                        <a
+                            v-for="(category, index) in marqueeCategories"
+                            :key="`${category.id || category.name}-${index}`"
+                            href="#"
+                            :aria-hidden="
+                                index >= loopedCategories.length
+                                    ? 'true'
+                                    : undefined
+                            "
+                            :tabindex="
+                                index >= loopedCategories.length ? -1 : 0
+                            "
+                            class="category-card group relative block w-[180px] shrink-0 rounded-sm bg-[#f7f2e7] p-3 pb-4 text-[#2b2015] no-underline shadow-[0_2px_10px_rgba(0,0,0,0.06)] transition-transform duration-300 ease-out hover:z-30 hover:-translate-y-2 hover:scale-[1.035] hover:rotate-0 focus-visible:z-30 focus-visible:-translate-y-2 focus-visible:scale-[1.035] focus-visible:rotate-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary md:w-[230px]"
+                            :class="tiltFor(index)"
                         >
-                            <img
-                                :src="
-                                    category.imageUrl || '/img/placeholder.jpg'
-                                "
-                                :alt="
-                                    index < props.categories.length
-                                        ? category.name
-                                        : ''
-                                "
-                                loading="lazy"
-                                draggable="false"
-                                class="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+                            <!-- Tape -->
+                            <span
+                                class="absolute -top-3 left-1/2 z-20 h-[26px] w-16 -translate-x-1/2 rotate-[-4deg] rounded-[1px] opacity-90 shadow-[0_2px_4px_rgba(0,0,0,.2)]"
+                                :class="tapeFor(index)"
                             />
 
+                            <!-- Image -->
                             <div
-                                class="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/[0.03]"
-                            />
-                        </div>
+                                class="relative aspect-[4/3] w-full overflow-hidden rounded-[1px] bg-[#ddd6c6]"
+                            >
+                                <img
+                                    :src="
+                                        category.imageUrl ||
+                                        '/img/placeholder.jpg'
+                                    "
+                                    :alt="
+                                        index < loopedCategories.length
+                                            ? category.name
+                                            : ''
+                                    "
+                                    loading="lazy"
+                                    draggable="false"
+                                    class="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+                                />
 
-                        <!-- Content -->
-                        <span
-                            class="mt-3 block truncate font-caveat text-2xl font-semibold leading-tight"
-                        >
-                            {{ category.name }}
-                        </span>
+                                <div
+                                    class="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/[0.03]"
+                                />
+                            </div>
 
-                        <span
-                            v-if="category.available"
-                            class="mt-0.5 block text-[11px] font-medium text-[#5a4c39]"
-                        >
-                            Available online
-                        </span>
-                    </a>
+                            <!-- Content -->
+                            <span
+                                class="mt-3 block truncate font-caveat text-2xl font-semibold leading-tight"
+                            >
+                                {{ category.name }}
+                            </span>
+
+                            <span
+                                v-if="category.available"
+                                class="mt-0.5 block text-[11px] font-medium text-[#5a4c39]"
+                            >
+                                Available online
+                            </span>
+                        </a>
+                    </div>
                 </div>
+
+                <!-- Left fade -->
+                <div
+                    class="pointer-events-none absolute inset-y-0 left-0 z-10 hidden w-16 bg-gradient-to-r from-white via-white/70 to-transparent md:block"
+                />
+
+                <!-- Right fade -->
+                <div
+                    class="pointer-events-none absolute inset-y-0 right-0 z-10 hidden w-16 bg-gradient-to-l from-white via-white/70 to-transparent md:block"
+                />
             </div>
-
-            <div
-                class="pointer-events-none absolute inset-y-0 left-0 z-10 hidden w-12 bg-gradient-to-r from-white to-transparent md:block"
-            />
-
-            <div
-                class="pointer-events-none absolute inset-y-0 right-0 z-10 hidden w-12 bg-gradient-to-l from-white to-transparent md:block"
-            />
         </div>
     </section>
 </template>
@@ -184,6 +187,10 @@ function tapeFor(index: number) {
 @media (prefers-reduced-motion: reduce) {
     .category-track {
         animation: none;
+        transform: none;
+    }
+
+    .category-marquee {
         overflow-x: auto;
     }
 }

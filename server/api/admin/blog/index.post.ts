@@ -6,8 +6,8 @@ const createBlogSchema = z.object({
   title: z.string().min(5),
   slug: z.string().min(2),
   content: z.string().min(10),
-  excerpt: z.string().optional(),
-  featuredImage: z.string().url().optional(),
+  excerpt: z.string().optional().nullable().transform(v => !v || v === '' ? null : v),
+  featuredImage: z.string().url().optional().nullable().or(z.literal('')).transform(v => !v || v === '' ? null : v),
   categoryId: z.string().uuid(),
   published: z.boolean().default(false)
 })

@@ -327,7 +327,7 @@ const updateSlug = () => {
 
         <!-- Slideover -->
         <UiSlideover
-            :open="isSlideoverOpen"
+            :show="isSlideoverOpen"
             :title="editingBlog ? 'Update Article' : 'Create Article'"
             @close="closeSlideover"
         >

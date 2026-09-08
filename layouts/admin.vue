@@ -14,6 +14,7 @@ import {
     X,
     ChevronRight,
     Mail,
+    MapPin,
 } from "lucide-vue-next";
 
 const navItems = [

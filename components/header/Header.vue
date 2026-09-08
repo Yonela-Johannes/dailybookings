@@ -116,6 +116,7 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 const dashboardPath = computed(() => {
     if (!dbUser.value) return "/dashboard";
+    console.log(`Header: User role is ${dbUser.value.role}`);
     switch (dbUser.value.role) {
         case "PLATFORM_ADMIN":
             return "/admin";
@@ -203,9 +204,9 @@ const handleLogout = async () => {
 
                 <NuxtLink
                     :to="
-                        user?.role === 'BUSINESS_OWNER'
+                        dbUser?.role === 'BUSINESS_OWNER'
                             ? '/business'
-                            : user?.role === 'PLATFORM_ADMIN'
+                            : dbUser?.role === 'PLATFORM_ADMIN'
                               ? '/admin'
                               : '/for-business'
                     "
@@ -491,9 +492,11 @@ const handleLogout = async () => {
 
                                     <NuxtLink
                                         :to="
-                                            user?.role === 'BUSINESS_OWNER'
+                                            dbUser?.role === 'BUSINESS_OWNER'
                                                 ? '/business'
-                                                : '/for-business'
+                                                : dbUser?.role === 'PLATFORM_ADMIN'
+                                                  ? '/admin'
+                                                  : '/for-business'
                                         "
                                         class="flex items-center justify-between px-3 py-3 text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-100"
                                         @click="closeMenu"

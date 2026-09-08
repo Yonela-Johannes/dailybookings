@@ -27,8 +27,10 @@ const showPassword = ref(false);
 const showConfirmPassword = ref(false);
 
 const selectedRole = ref(route.query.role as string || "CUSTOMER");
+const isAdminFlow = computed(() => route.query.role === "PLATFORM_ADMIN" || selectedRole.value === "PLATFORM_ADMIN");
 
 const role = computed(() => {
+    if (selectedRole.value === "PLATFORM_ADMIN") return "PLATFORM_ADMIN";
     if (selectedRole.value === "BUSINESS_OWNER") return "BUSINESS_OWNER";
     return "CUSTOMER";
 });
@@ -173,7 +175,7 @@ async function handleRegister() {
                             <label class="block text-sm font-medium text-slate-900">
                                 I want to:
                             </label>
-                            <div class="grid grid-cols-2 gap-3">
+                            <div :class="['grid gap-3', isAdminFlow ? 'grid-cols-3' : 'grid-cols-2']">
                                 <button
                                     type="button"
                                     @click="selectedRole = 'CUSTOMER'"
@@ -197,6 +199,19 @@ async function handleRegister() {
                                     ]"
                                 >
                                     List my Business
+                                </button>
+                                <button
+                                    v-if="isAdminFlow"
+                                    type="button"
+                                    @click="selectedRole = 'PLATFORM_ADMIN'"
+                                    :class="[
+                                        'h-12 border text-sm font-medium transition-all',
+                                        selectedRole === 'PLATFORM_ADMIN'
+                                            ? 'border-slate-950 bg-slate-950 text-white'
+                                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                                    ]"
+                                >
+                                    Platform Admin
                                 </button>
                             </div>
                         </div>

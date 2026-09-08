@@ -21,15 +21,16 @@ export default defineEventHandler(async (event) => {
     prevBookingCount,
     prevRevenueResult
   ] = await Promise.all([
-    prisma.user.count(),
-    prisma.venue.count(),
-    prisma.booking.count(),
+    prisma.user.count({ where: { deletedAt: null } }),
+    prisma.venue.count({ where: { deletedAt: null } }),
+    prisma.booking.count({ where: { deletedAt: null } }),
     prisma.community.count(),
     prisma.booking.aggregate({
-      where: { status: { in: ['CONFIRMED', 'COMPLETED'] } },
+      where: { status: { in: ['CONFIRMED', 'COMPLETED'] }, deletedAt: null },
       _sum: { priceTotal: true }
     }),
     prisma.booking.findMany({
+      where: { deletedAt: null },
       take: 5,
       orderBy: { createdAt: 'desc' },
       include: {
@@ -38,22 +39,23 @@ export default defineEventHandler(async (event) => {
       }
     }),
     prisma.user.findMany({
+      where: { deletedAt: null },
       take: 5,
       orderBy: { createdAt: 'desc' },
       select: { id: true, fullName: true, email: true, role: true, createdAt: true }
     }),
     prisma.booking.groupBy({
       by: ['date'],
-      where: { date: { gte: subDays(new Date(), 7) } },
+      where: { date: { gte: subDays(new Date(), 7) }, deletedAt: null },
       _count: { id: true },
       orderBy: { date: 'asc' }
     }),
     // Previous week counts for change calculation
-    prisma.user.count({ where: { createdAt: { lt: lastWeek } } }),
-    prisma.venue.count({ where: { createdAt: { lt: lastWeek } } }),
-    prisma.booking.count({ where: { createdAt: { lt: lastWeek } } }),
+    prisma.user.count({ where: { createdAt: { lt: lastWeek }, deletedAt: null } }),
+    prisma.venue.count({ where: { createdAt: { lt: lastWeek }, deletedAt: null } }),
+    prisma.booking.count({ where: { createdAt: { lt: lastWeek }, deletedAt: null } }),
     prisma.booking.aggregate({
-      where: { createdAt: { lt: lastWeek }, status: { in: ['CONFIRMED', 'COMPLETED'] } },
+      where: { createdAt: { lt: lastWeek }, status: { in: ['CONFIRMED', 'COMPLETED'] }, deletedAt: null },
       _sum: { priceTotal: true }
     })
   ])
