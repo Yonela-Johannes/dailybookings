@@ -3,7 +3,7 @@ import { prisma } from '~/server/utils/prisma'
 export default defineEventHandler(async () => {
 
   try {
-    const [recommended, trending, newArrivals, popularCategories] = await Promise.all([
+    const [recommended, trending, newArrivals, popularCategories, trendingServices, communityMedia, communities] = await Promise.all([
       // recommended: highly rated, verified
       prisma.venue.findMany({
         where: {
@@ -29,7 +29,7 @@ export default defineEventHandler(async () => {
           }
         }
       }),
-      // trending: popular services' venues (simulated by rating for now)
+      // trending: popular services' venues (simulated by review count for now)
       prisma.venue.findMany({
         where: {
           status: 'ACTIVE'
@@ -86,6 +86,38 @@ export default defineEventHandler(async () => {
           }
         },
         take: 8
+      }),
+      // trendingServices
+      prisma.service.findMany({
+        where: { popular: true, deletedAt: null },
+        take: 12,
+        orderBy: { createdAt: 'desc' }
+      }),
+      // communityMedia: recent featured media from portfolios or venues
+      prisma.media.findMany({
+        where: {
+          OR: [
+            { entityType: 'PORTFOLIO' },
+            { entityType: 'VENUE', featured: true }
+          ]
+        },
+        take: 7,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          venue: {
+            select: {
+              name: true,
+              slug: true,
+              category: { select: { name: true } }
+            }
+          }
+        }
+      }),
+      // communities: recently created or active
+      prisma.community.findMany({
+        where: { status: 'ACTIVE' },
+        take: 6,
+        orderBy: { createdAt: 'desc' }
       })
     ])
 
@@ -93,7 +125,10 @@ export default defineEventHandler(async () => {
       recommended,
       trending,
       newArrivals,
-      popularCategories
+      popularCategories,
+      trendingServices,
+      communityMedia,
+      communities
     }
   } catch (error: any) {
     throw createError({

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Heart, Star } from "lucide-vue-next";
+import { Bookmark, Heart, Star } from "lucide-vue-next";
+import { NAVIGATION_PATHS} from "~/utils/constants";
 
 interface Provider {
     id: string | number;
@@ -17,36 +18,75 @@ interface Provider {
 
 const props = defineProps<{
     provider: Provider;
+    isFavorite?: boolean;
+    isLiked?: boolean;
 }>();
 
 const emit = defineEmits<{
     favorite: [id: string | number];
+    like: [id: string | number];
 }>();
 </script>
 
 <template>
     <article class="group relative min-w-0">
-        <!-- IMAGE -->
-        <div class="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
-            <img
-                :src="props.provider.image || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1600'"
-                :alt="props.provider.alt"
-                loading="lazy"
-                class="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.025]"
-            />
-
-            <div
-                class="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/35 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-            />
-
-            <button
-                type="button"
-                class="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center border border-white/30 bg-black/25 text-white backdrop-blur-sm transition-all hover:border-white/60 hover:bg-black/50 active:scale-95"
-                :aria-label="`Add ${props.provider.name} to favorites`"
-                @click.stop.prevent="emit('favorite', props.provider.id)"
+        <div
+            class="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-slate-100"
+        >
+            <NuxtLink
+                :to="NAVIGATION_PATHS.VENUE(props.provider.slug)"
+                class="absolute inset-0 z-[5]"
+                :aria-label="`View ${props.provider.name}`"
             >
-                <Heart class="h-[17px] w-[17px]" />
-            </button>
+                <img
+                    :src="
+                        props.provider.image ||
+                        'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1600'
+                    "
+                    :alt="props.provider.alt"
+                    loading="lazy"
+                    class="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.025]"
+                />
+
+                <div
+                    class="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/35 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                />
+            </NuxtLink>
+
+            <div class="absolute right-3 top-3 z-20 flex flex-col gap-2">
+                <button
+                    type="button"
+                    class="flex h-9 w-9 items-center justify-center border border-white/30 bg-black/25 text-white backdrop-blur-sm transition-all hover:border-white/60 hover:bg-black/50 active:scale-95"
+                    :class="{
+                        '!border-white/90 !bg-white/90 !text-primary':
+                            props.isFavorite,
+                    }"
+                    :aria-label="`Add ${props.provider.name} to saved`"
+                    @click.stop.prevent="emit('favorite', props.provider.id)"
+                >
+                    <Bookmark
+                        class="h-[17px] w-[17px]"
+                        :class="{ 'fill-current': props.isFavorite }"
+                    />
+                </button>
+
+                <button
+                    type="button"
+                    class="flex h-9 w-9 items-center justify-center border border-white/30 bg-black/25 text-white backdrop-blur-sm transition-all hover:border-white/60 hover:bg-black/50 active:scale-95"
+                    :class="{
+                        '!border-white/90 !bg-white/90 !text-red-500':
+                            props.isLiked,
+                    }"
+                    :aria-label="`Like ${props.provider.name}`"
+                    @click.stop.prevent="emit('like', props.provider.id)"
+                >
+                    <Heart
+                        class="h-[17px] w-[17px]"
+                        :class="{ 'fill-current': props.isLiked }"
+                    />
+                </button>
+            </div>
+
             <div
                 v-if="props.provider.tag"
                 class="absolute bottom-3 left-3 z-10 bg-white px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-900 shadow-sm"
@@ -54,6 +94,7 @@ const emit = defineEmits<{
                 {{ props.provider.tag }}
             </div>
         </div>
+
         <div class="mt-4">
             <div class="flex items-start justify-between gap-3">
                 <h3
@@ -74,7 +115,6 @@ const emit = defineEmits<{
                     </svg>
                 </h3>
 
-                <!-- RATING -->
                 <div class="flex shrink-0 items-center gap-1">
                     <Star class="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
 
@@ -86,7 +126,6 @@ const emit = defineEmits<{
                 </div>
             </div>
 
-            <!-- LOCATION -->
             <p class="mt-1 truncate text-sm leading-5 text-slate-500">
                 {{ props.provider.location }}
             </p>
@@ -97,13 +136,5 @@ const emit = defineEmits<{
                 {{ props.provider.reviews.toLocaleString() }} reviews
             </p>
         </div>
-
-        <NuxtLink
-            :to="`/venue/${props.provider.slug}`"
-            class="absolute inset-0 z-10"
-            :aria-label="`View ${props.provider.name}`"
-        />
-
-        <div class="pointer-events-none absolute inset-0 z-[15]" />
     </article>
 </template>

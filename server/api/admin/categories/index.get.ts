@@ -15,5 +15,5 @@ export default defineEventHandler(async (event) => {
     orderBy: { name: 'asc' }
   })
 
-  return categories
+  return { data: categories }
 })

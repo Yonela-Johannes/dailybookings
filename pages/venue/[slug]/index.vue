@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import {
-    ArrowLeft,
     CalendarDays,
     ChevronRight,
     Heart,
+    Bookmark,
     MapPin,
     Share2,
+    MessageSquare,
 } from "lucide-vue-next";
 import { formatDistanceToNow } from "date-fns";
 
@@ -18,6 +19,8 @@ import BookingSidebar from "~/components/venue/BookingSidebar.vue";
 import StarRating from "~/components/venue/StarRating.vue";
 
 const route = useRoute();
+const { toggleFavorite, isFavorite } = useFavorites();
+const { toggleLike, isLiked } = useLikes();
 
 const { data: venueData, pending } = await useVenue(route.params.slug as string);
 
@@ -51,7 +54,7 @@ const serviceCount = computed(() => {
 });
 
 function handleBook(serviceId: string) {
-    navigateTo(`/venues/${route.params.slug}/booking?service=${serviceId}`);
+    navigateTo(`/venue/${route.params.slug}/booking?service=${serviceId}`);
 }
 
 function handleBookNow() {
@@ -61,10 +64,47 @@ function handleBookNow() {
 function handleShare() {
     if (typeof navigator === "undefined") return;
 
-    navigator.share?.({
-        title: venue.value?.name,
-        url: window.location.href,
-    });
+    if (navigator.share) {
+        navigator.share({
+            title: venue.value?.name,
+            url: window.location.href,
+        }).catch(err => {
+            console.error('Error sharing:', err);
+        });
+    } else {
+
+        navigator.clipboard.writeText(window.location.href).then(() => {
+            alert('Link copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+        });
+    }
+}
+
+function handleSave() {
+    if (venue.value) {
+        toggleFavorite(venue.value.id);
+    }
+}
+
+function handleLike() {
+    if (venue.value) {
+        toggleLike(venue.value.id);
+    }
+}
+
+async function handleStartMessage() {
+    if (!venue.value?.business?.ownerId) return;
+
+    try {
+        const conv = await $fetch<any>('/api/messages/start', {
+            method: 'POST',
+            body: { recipientId: venue.value.business.ownerId }
+        });
+        navigateTo(`/messages`);
+    } catch (err) {
+        console.error('Failed to start conversation:', err);
+    }
 }
 </script>
 
@@ -84,7 +124,7 @@ function handleShare() {
         </div>
     </div>
 
-    <main v-else-if="venue" class="pb-24 lg:pb-16">
+    <main v-else-if="venue" class="pb-24 lg:pb-16 py-20 lgpy-24">
         <div class="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
             <nav
                 class="mb-5 flex items-center gap-2 text-sm text-slate-400"
@@ -97,10 +137,10 @@ function handleShare() {
                 <ChevronRight class="h-3.5 w-3.5" />
 
                 <NuxtLink
-                    to="/venues"
+                    to="/discover"
                     class="transition-colors hover:text-slate-900"
                 >
-                    Venues
+                    Explore
                 </NuxtLink>
 
                 <ChevronRight class="h-3.5 w-3.5" />
@@ -116,9 +156,7 @@ function handleShare() {
                 <div
                     class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between"
                 >
-                    <!-- Identity -->
                     <div class="min-w-0">
-                        <!-- Category -->
                         <div
                             v-if="venue.category"
                             class="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-primary"
@@ -126,7 +164,6 @@ function handleShare() {
                             {{ venue.category.name }}
                         </div>
 
-                        <!-- Name -->
                         <div
                             class="flex flex-wrap items-center gap-x-3 gap-y-2"
                         >
@@ -144,7 +181,6 @@ function handleShare() {
                             </span>
                         </div>
 
-                        <!-- Meta -->
                         <div
                             class="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-500"
                         >
@@ -177,7 +213,6 @@ function handleShare() {
                         </div>
                     </div>
 
-                    <!-- Actions -->
                     <div class="flex shrink-0 items-center gap-2">
                         <button
                             type="button"
@@ -185,15 +220,37 @@ function handleShare() {
                             @click="handleShare"
                         >
                             <Share2 class="h-4 w-4" />
-                            <span>Share</span>
+                            <span class="hidden sm:inline">Share</span>
+                        </button>
+
+                        <button
+                            v-if="user && user.id !== venue.business.ownerId"
+                            type="button"
+                            class="inline-flex h-10 items-center gap-2 border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:border-slate-950 hover:bg-slate-950 hover:text-white"
+                            @click="handleStartMessage"
+                        >
+                            <MessageSquare class="h-4 w-4" />
+                            <span class="hidden sm:inline">Message</span>
                         </button>
 
                         <button
                             type="button"
                             class="inline-flex h-10 items-center gap-2 border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:border-slate-950 hover:bg-slate-950 hover:text-white"
+                            :class="{ '!bg-red-50 !text-red-600 !border-red-100': isLiked(venue.id) }"
+                            @click="handleLike"
                         >
-                            <Heart class="h-4 w-4" />
-                            <span>Save</span>
+                            <Heart class="h-4 w-4" :class="{ 'fill-current': isLiked(venue.id) }" />
+                            <span class="hidden sm:inline">{{ isLiked(venue.id) ? 'Liked' : 'Like' }}</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="inline-flex h-10 items-center gap-2 border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:border-slate-950 hover:bg-slate-950 hover:text-white"
+                            :class="{ '!bg-primary !text-white !border-primary': isFavorite(venue.id) }"
+                            @click="handleSave"
+                        >
+                            <Bookmark class="h-4 w-4" :class="{ 'fill-current': isFavorite(venue.id) }" />
+                            <span>{{ isFavorite(venue.id) ? 'Saved' : 'Save' }}</span>
                         </button>
                     </div>
                 </div>
@@ -203,9 +260,7 @@ function handleShare() {
         <div
             class="mx-auto grid max-w-7xl gap-12 px-4 pt-10 sm:px-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-8 lg:pt-12"
         >
-            <!-- Main -->
             <div class="min-w-0 space-y-16">
-                <!-- Services -->
                 <section>
                     <div class="mb-6">
                         <p

@@ -4,9 +4,9 @@ import { z } from 'zod'
 import { BookingStatus } from '@prisma/client'
 
 const querySchema = z.object({
-  status: z.nativeEnum(BookingStatus).optional(),
-  page: z.string().optional().transform(v => parseInt(v || '1')),
-  limit: z.string().optional().transform(v => parseInt(v || '20'))
+  status: z.string().optional().transform(v => v === '' ? undefined : v).pipe(z.nativeEnum(BookingStatus).optional()),
+  page: z.string().optional().transform(v => v ? parseInt(v) : 1),
+  limit: z.string().optional().transform(v => v ? parseInt(v) : 20)
 })
 
 export default defineEventHandler(async (event) => {
@@ -36,11 +36,18 @@ export default defineEventHandler(async (event) => {
       })
     ])
 
+    // Serialization Fix: Convert Decimals to Numbers
+    const cleanedBookings = bookings.map(b => ({
+      ...b,
+      priceTotal: Number(b.priceTotal),
+      services: b.services.map(s => ({
+        ...s,
+        price: Number(s.price)
+      }))
+    }))
+
     return {
-      data: bookings.map(b => ({
-        ...b,
-        priceTotal: Number(b.priceTotal)
-      })),
+      data: cleanedBookings,
       meta: {
         total,
         page,

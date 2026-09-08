@@ -9,6 +9,7 @@ const updateVenueSchema = z.object({
   tagline: z.string().optional(),
   description: z.string().optional(),
   categoryId: z.string().uuid().optional(),
+  communityId: z.string().uuid().optional().nullable().transform(v => v === '' ? null : v),
   status: z.nativeEnum(VenueStatus).optional(),
   address: z.object({
     street: z.string(),
@@ -21,12 +22,12 @@ const updateVenueSchema = z.object({
     lng: z.number().optional()
   }).optional(),
   contact: z.object({
-    phone: z.string(),
-    whatsapp: z.string().optional(),
-    email: z.string().email(),
-    website: z.string().url().optional().or(z.literal('')),
-    instagram: z.string().optional(),
-    facebook: z.string().optional()
+    phone: z.string().trim().min(5).optional(),
+    whatsapp: z.string().trim().optional(),
+    email: z.string().trim().email().toLowerCase().optional(),
+    website: z.string().trim().url().optional().or(z.literal('')),
+    instagram: z.string().trim().optional(),
+    facebook: z.string().trim().optional()
   }).optional(),
   bookingConfig: z.object({
     instantConfirmation: z.boolean().optional(),
@@ -100,6 +101,7 @@ export default defineEventHandler(async (event) => {
         tagline: data.tagline,
         description: data.description,
         categoryId: data.categoryId,
+        communityId: data.communityId,
         status: data.status,
         address: data.address ? {
           update: data.address

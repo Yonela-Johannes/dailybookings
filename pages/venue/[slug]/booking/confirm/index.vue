@@ -54,11 +54,10 @@ const handleConfirmBooking = async () => {
   try {
     const bookingData = {
       venueId: venue.value?.id,
-      services: cart.lines.value.map(l => l.service.id),
+      serviceIds: cart.lines.value.map(l => l.service.id),
       date: selectedDate.value,
-      time: selectedTime.value,
+      startTime: selectedTime.value,
       employeeId: bookingDateTime.employeeId.value,
-      userId: user.value.id
     }
 
     const response = (await createBooking(bookingData)) as any
@@ -136,12 +135,12 @@ const handleConfirmBooking = async () => {
                     <h3 class="font-bold text-slate-800">{{ line.service.name }}</h3>
                     <p class="text-sm text-slate-500">{{ line.service.durationMinutes }} mins</p>
                   </div>
-                  <span class="font-bold text-slate-900">${{ line.service.price }}</span>
+                  <span class="font-bold text-slate-900">R{{ line.service.price }}</span>
                 </div>
 
                 <div class="flex justify-between items-center pt-4 text-lg">
                   <span class="font-bold text-slate-900">Total</span>
-                  <span class="font-extrabold text-primary text-2xl">${{ totalAmount }}</span>
+                  <span class="font-extrabold text-primary text-2xl">R{{ totalAmount }}</span>
                 </div>
               </div>
             </section>
@@ -217,7 +216,7 @@ const handleConfirmBooking = async () => {
             <div class="bg-white rounded-2xl p-6 shadow-xl border border-primary/10 sticky top-24">
               <div class="text-center mb-6">
                 <div class="text-slate-500 text-sm mb-1">Total to pay</div>
-                <div class="text-4xl font-black text-slate-900">${{ totalAmount }}</div>
+                <div class="text-4xl font-black text-slate-900">R{{ totalAmount }}</div>
               </div>
 
               <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm flex items-start gap-2">

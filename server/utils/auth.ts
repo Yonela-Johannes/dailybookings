@@ -1,11 +1,14 @@
 import { H3Event } from 'h3'
-import { serverSupabaseUser } from '#supabase/server'
+import { serverSupabaseClient } from '#supabase/server'
 import { prisma } from './prisma'
 import { UserRole } from '@prisma/client'
 
 export const requireAuth = async (event: H3Event) => {
-  const user = await serverSupabaseUser(event)
+  const client = await serverSupabaseClient(event)
+  const { data: { user } } = await client.auth.getUser()
+
   if (!user) {
+    console.warn('requireAuth: No Supabase user found')
     throw createError({
       statusCode: 401,
       statusMessage: 'Unauthorized'
@@ -17,12 +20,14 @@ export const requireAuth = async (event: H3Event) => {
   })
 
   if (!dbUser) {
+    console.warn(`requireAuth: User ${user.id} not found in database`)
     throw createError({
       statusCode: 404,
       statusMessage: 'User not found'
     })
   }
 
+  console.log(`requireAuth: Authenticated ${dbUser.email} with role ${dbUser.role}`)
   return dbUser
 }
 

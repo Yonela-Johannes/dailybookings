@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { CheckCircle2, ChevronRight } from "lucide-vue-next";
+import { CheckCircle2, ChevronRight, MessageSquare, Send, Loader2 } from "lucide-vue-next";
+import { formatDistanceToNow } from "date-fns";
 
 import StarRating from "./StarRating.vue";
-import type { Venue } from "~/types/venue";
+import type { Venue, VenueReview } from "~/types/venue";
 
 const props = withDefaults(
     defineProps<{
@@ -13,6 +14,35 @@ const props = withDefaults(
         previewCount: 4,
     },
 );
+
+const { user } = useAuth();
+const commentBodies = ref<Record<string, string>>({});
+const submittingComments = ref<Record<string, boolean>>({});
+
+async function submitComment(reviewId: string) {
+    const body = commentBodies.value[reviewId]?.trim();
+    if (!body || !user.value) return;
+
+    submittingComments.value[reviewId] = true;
+    try {
+        const comment = await $fetch<any>(`/api/reviews/${reviewId}/comments`, {
+            method: 'POST',
+            body: { body }
+        });
+
+        // Find review and push comment locally
+        const review = props.venue.reviews.find(r => r.id === reviewId);
+        if (review) {
+            if (!review.comments) review.comments = [];
+            review.comments.push(comment);
+        }
+        commentBodies.value[reviewId] = '';
+    } catch (err) {
+        console.error('Failed to submit comment:', err);
+    } finally {
+        submittingComments.value[reviewId] = false;
+    }
+}
 
 function initials(name: string) {
     return name
@@ -184,6 +214,47 @@ const visibleReviews = computed(() =>
                         >
                             Service with {{ review.employeeName }}
                         </p>
+
+                        <!-- Comments Section -->
+                        <div v-if="review.comments?.length || user" class="mt-6 space-y-4">
+                            <div v-for="comment in review.comments" :key="comment.id" class="flex gap-3 bg-slate-50 p-3">
+                                <div class="h-6 w-6 shrink-0 rounded-full bg-slate-200 overflow-hidden">
+                                    <img v-if="comment.user.profile?.avatarUrl" :src="comment.user.profile.avatarUrl" class="h-full w-full object-cover" />
+                                    <span v-else class="flex h-full w-full items-center justify-center text-[8px] font-bold text-slate-500 uppercase">{{ comment.user.fullName[0] }}</span>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="text-[10px] font-bold text-slate-900">{{ comment.user.fullName }}</span>
+                                        <span class="text-[9px] text-slate-400">{{ formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true }) }}</span>
+                                    </div>
+                                    <p class="mt-1 text-xs text-slate-600">{{ comment.body }}</p>
+                                </div>
+                            </div>
+
+                            <!-- Add Comment -->
+                            <div v-if="user" class="flex gap-3 mt-4">
+                                <div class="h-8 w-8 shrink-0 rounded-full bg-slate-100 flex items-center justify-center">
+                                    <MessageSquare class="h-4 w-4 text-slate-400" />
+                                </div>
+                                <div class="relative flex-1">
+                                    <input
+                                        v-model="commentBodies[review.id]"
+                                        type="text"
+                                        placeholder="Add a comment..."
+                                        class="w-full h-8 bg-transparent border-b border-slate-200 text-xs focus:border-primary outline-none transition-colors pr-8"
+                                        @keyup.enter="submitComment(review.id)"
+                                    />
+                                    <button
+                                        :disabled="!commentBodies[review.id]?.trim() || submittingComments[review.id]"
+                                        class="absolute right-0 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary transition-colors disabled:opacity-30"
+                                        @click="submitComment(review.id)"
+                                    >
+                                        <Loader2 v-if="submittingComments[review.id]" class="h-3 w-3 animate-spin" />
+                                        <MessageSquare v-else class="h-3 w-3" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </article>

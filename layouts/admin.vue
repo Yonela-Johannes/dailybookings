@@ -1,210 +1,436 @@
 <script setup lang="ts">
 import {
-  LayoutDashboard,
-  Store,
-  Users,
-  ShieldCheck,
-  Settings,
-  LogOut,
-  Bell,
-  Search,
-  MessageSquare,
-  Calendar,
-  Layers,
-  FileText,
-  Menu,
-  X
-} from 'lucide-vue-next'
+    LayoutDashboard,
+    Store,
+    Users,
+    LogOut,
+    Bell,
+    Search,
+    MessageSquare,
+    Calendar,
+    Layers,
+    FileText,
+    Menu,
+    X,
+    ChevronRight,
+    Mail,
+    MapPin,
+} from "lucide-vue-next";
 
 const navItems = [
-  { label: 'Dashboard', icon: LayoutDashboard, to: '/admin' },
-  { label: 'Categories', icon: Layers, to: '/admin/categories' },
-  { label: 'Venues', icon: Store, to: '/admin/venues' },
-  { label: 'Users', icon: Users, to: '/admin/users' },
-  { label: 'Bookings', icon: Calendar, to: '/admin/bookings' },
-  { label: 'Reviews', icon: MessageSquare, to: '/admin/reviews' },
-  { label: 'Blog', icon: FileText, to: '/admin/blog' },
-]
+    { label: "Dashboard", icon: LayoutDashboard, to: "/admin" },
+    { label: "Categories", icon: Layers, to: "/admin/categories" },
+    { label: "Businesses", icon: Store, to: "/admin/venues" },
+    { label: "Users", icon: Users, to: "/admin/users" },
+    { label: "Bookings", icon: Calendar, to: "/admin/bookings" },
+    { label: "Communities", icon: MapPin, to: "/admin/communities" },
+    { label: "Reviews", icon: MessageSquare, to: "/admin/reviews" },
+    { label: "Blog", icon: FileText, to: "/admin/blog" },
+    { label: "Newsletter", icon: Mail, to: "/admin/newsletter" },
+];
 
-const { dbUser, logout } = useAuth()
+const { dbUser, logout } = useAuth();
+const route = useRoute();
+
+const isMobileMenuOpen = ref(false);
+
 const handleLogout = async () => {
-  await logout()
-  navigateTo('/auth/login')
-}
+    await logout();
+    navigateTo("/auth/login");
+};
 
 const initials = computed(() => {
-  if (!dbUser.value?.fullName) return 'A'
-  return dbUser.value.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase()
-})
+    if (!dbUser.value?.fullName) return "A";
 
-const isMobileMenuOpen = ref(false)
+    return dbUser.value.fullName
+        .split(" ")
+        .filter(Boolean)
+        .map((name: string) => name[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase();
+});
+
+watch(
+    () => route.path,
+    () => {
+        isMobileMenuOpen.value = false;
+    },
+);
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-950 flex text-slate-300 font-sans selection:bg-teal-500/30 selection:text-teal-200">
-    <!-- Sidebar -->
-    <aside class="w-72 bg-slate-950 border-r border-slate-900 hidden lg:flex flex-col sticky top-0 h-screen z-50">
-      <div class="p-8 border-b border-slate-900 flex items-center gap-4">
-        <div class="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center text-slate-950 font-black shadow-lg shadow-teal-500/20">D</div>
-        <div class="flex flex-col">
-          <span class="font-black text-white text-lg leading-tight uppercase tracking-tighter italic">DailyBookings</span>
-          <span class="text-[10px] font-bold text-teal-500 uppercase tracking-[0.2em] leading-none">Admin Control</span>
-        </div>
-      </div>
-
-      <nav class="flex-1 p-6 space-y-2 overflow-y-auto custom-scrollbar">
-        <div class="mb-4 px-4 text-[10px] font-black text-slate-600 uppercase tracking-widest">Main Menu</div>
-        <NuxtLink
-          v-for="item in navItems"
-          :key="item.to"
-          :to="item.to"
-          class="flex items-center gap-4 px-4 py-3 text-slate-400 font-bold rounded-xl hover:bg-slate-900 hover:text-white transition-all duration-300 group relative overflow-hidden"
-          active-class="bg-teal-500/10 !text-teal-400 border border-teal-500/20 shadow-lg shadow-teal-500/5"
+    <div
+        class="flex min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-primary/10 selection:text-primary"
+    >
+        <!-- Desktop Sidebar -->
+        <aside
+            class="sticky top-0 z-50 hidden h-screen w-64 shrink-0 flex-col border-r border-slate-200 bg-white lg:flex"
         >
-          <component :is="item.icon" class="w-5 h-5 transition-transform group-hover:scale-110" />
-          <span class="text-sm">{{ item.label }}</span>
-          <div v-if="$route.path === item.to" class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-teal-500 rounded-r-full shadow-[0_0_12px_rgba(20,184,166,0.5)]"></div>
-        </NuxtLink>
-      </nav>
+            <!-- Brand -->
+            <div class="flex h-20 items-center border-b border-slate-200 px-6">
+                <NuxtLink
+                    to="/"
+                    class="group flex items-center"
+                    aria-label="DailyBookings home"
+                >
+                    <div class="flex items-center overflow-hidden">
+                        <img
+                            src="/mobile-logo.png"
+                            alt=""
+                            class="h-7 w-auto object-contain"
+                        />
 
-      <div class="p-6 border-t border-slate-900 space-y-6">
-        <div class="flex items-center gap-4 px-4 py-2">
-           <div class="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-teal-500 font-black shadow-inner overflow-hidden">
-             <img v-if="dbUser?.profile?.avatarUrl" :src="dbUser.profile.avatarUrl" class="w-full h-full object-cover" />
-             <template v-else>{{ initials }}</template>
-           </div>
-           <div class="flex flex-col min-w-0">
-             <span class="text-sm font-bold text-white truncate">{{ dbUser?.fullName || 'Admin' }}</span>
-             <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate">{{ dbUser?.email }}</span>
-           </div>
-        </div>
-        <button
-          @click="handleLogout"
-          class="w-full flex items-center gap-4 px-4 py-4 text-slate-500 font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-red-500/10 hover:text-red-400 border border-transparent hover:border-red-500/20 transition-all duration-300"
-        >
-          <LogOut class="w-4 h-4" />
-          System Logout
-        </button>
-      </div>
-    </aside>
-
-    <!-- Mobile Sidebar -->
-    <Teleport to="body">
-      <Transition
-        enter-active-class="transition duration-300 ease-out"
-        enter-from-class="opacity-0"
-        enter-to-class="opacity-100"
-        leave-active-class="transition duration-200 ease-in"
-        leave-from-class="opacity-100"
-        leave-to-class="opacity-0"
-      >
-        <div v-if="isMobileMenuOpen" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] lg:hidden">
-          <Transition
-            enter-active-class="transition duration-500 ease-out"
-            enter-from-class="-translate-x-full"
-            enter-to-class="translate-x-0"
-            leave-active-class="transition duration-300 ease-in"
-            leave-from-class="translate-x-0"
-            leave-to-class="-translate-x-full"
-          >
-            <div class="w-72 bg-slate-950 border-r border-slate-900 h-full flex flex-col">
-               <div class="p-8 border-b border-slate-900 flex items-center justify-between">
-                  <div class="flex items-center gap-4">
-                     <div class="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center text-slate-950 font-black shadow-lg">D</div>
-                     <span class="font-black text-white italic tracking-tighter">DailyBookings</span>
-                  </div>
-                  <button @click="isMobileMenuOpen = false" class="p-2 text-slate-500">
-                     <X class="w-6 h-6" />
-                  </button>
-               </div>
-
-               <nav class="flex-1 p-6 space-y-2 overflow-y-auto">
-                  <NuxtLink
-                    v-for="item in navItems"
-                    :key="item.to"
-                    :to="item.to"
-                    @click="isMobileMenuOpen = false"
-                    class="flex items-center gap-4 px-4 py-3 text-slate-400 font-bold rounded-xl hover:bg-slate-900 hover:text-white transition-all"
-                    active-class="bg-teal-500/10 !text-teal-400 border border-teal-500/20"
-                  >
-                    <component :is="item.icon" class="w-5 h-5" />
-                    <span class="text-sm">{{ item.label }}</span>
-                  </NuxtLink>
-               </nav>
-
-               <div class="p-6 border-t border-slate-900">
-                  <button @click="handleLogout" class="w-full flex items-center gap-4 px-4 py-4 text-slate-500 font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-red-500/10 hover:text-red-400 transition-all">
-                    <LogOut class="w-4 h-4" />
-                    System Logout
-                  </button>
-               </div>
+                        <img
+                            src="/logo.png"
+                            alt="DailyBookings"
+                            class="h-7 w-auto object-contain"
+                        />
+                    </div>
+                </NuxtLink>
             </div>
-          </Transition>
-        </div>
-      </Transition>
-    </Teleport>
 
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col min-h-screen overflow-hidden bg-slate-950">
-      <!-- Top Header -->
-      <header class="h-20 bg-slate-950/80 backdrop-blur-xl border-b border-slate-900 flex items-center justify-between px-10 sticky top-0 z-40">
-        <div class="flex items-center gap-4 lg:gap-8 flex-1">
-          <button @click="isMobileMenuOpen = true" class="lg:hidden p-2 text-slate-400 hover:text-white">
-            <Menu class="w-6 h-6" />
-          </button>
+            <!-- Navigation -->
+            <nav
+                class="custom-scrollbar flex-1 overflow-y-auto px-4 py-6"
+                aria-label="Admin navigation"
+            >
+                <div
+                    class="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400"
+                >
+                    Administration
+                </div>
 
-          <div class="relative w-full max-w-md group hidden sm:block">
-            <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-teal-500 transition-colors" />
-            <input
-              type="text"
-              placeholder="Search global records..."
-              class="w-full pl-12 pr-4 py-3 bg-slate-900/50 border border-slate-800 rounded-2xl text-xs text-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500/30 outline-none transition-all placeholder:text-slate-600 font-bold"
-            />
-          </div>
-        </div>
+                <div class="space-y-1">
+                    <NuxtLink
+                        v-for="item in navItems"
+                        :key="item.to"
+                        :to="item.to"
+                        class="group relative flex h-10 items-center gap-3 border border-transparent px-3 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                        active-class="!border-primary/10 !bg-primary/5 !text-primary"
+                    >
+                        <component
+                            :is="item.icon"
+                            class="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5"
+                        />
 
-        <div class="flex items-center gap-6">
-          <button class="p-3 text-slate-500 hover:text-white hover:bg-slate-900 rounded-xl transition-all relative border border-transparent hover:border-slate-800 group">
-            <Bell class="w-5 h-5 group-hover:rotate-12 transition-transform" />
-            <span class="absolute top-3 right-3 w-2 h-2 bg-teal-500 rounded-full border-2 border-slate-950 shadow-[0_0_8px_rgba(20,184,166,0.6)]"></span>
-          </button>
+                        <span>{{ item.label }}</span>
 
-          <div class="h-8 w-px bg-slate-900 mx-2"></div>
+                        <ChevronRight
+                            v-if="route.path === item.to"
+                            class="ml-auto h-3.5 w-3.5"
+                        />
+                    </NuxtLink>
+                </div>
+            </nav>
 
-          <div class="flex items-center gap-3">
-             <div class="text-right hidden sm:block">
-                <div class="text-xs font-black text-white uppercase tracking-widest">{{ dbUser?.fullName || 'Administrator' }}</div>
-                <div class="text-[10px] font-bold text-teal-500 uppercase tracking-[0.2em]">Platform Root</div>
-             </div>
-             <div class="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400 font-black shadow-lg">
-                {{ initials }}
-             </div>
-          </div>
-        </div>
-      </header>
+            <!-- Account -->
+            <div class="border-t border-slate-200 p-4">
+                <div
+                    class="flex items-center gap-3 border border-slate-200 bg-slate-50 px-3 py-3"
+                >
+                    <div
+                        class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden border border-slate-200 bg-white text-xs font-bold text-primary"
+                    >
+                        <img
+                            v-if="dbUser?.profile?.avatarUrl"
+                            :src="dbUser.profile.avatarUrl"
+                            :alt="dbUser.fullName || 'Admin'"
+                            class="h-full w-full object-cover"
+                        />
 
-      <!-- Page Content -->
-      <div class="p-10 flex-1 overflow-y-auto custom-scrollbar relative">
-        <!-- Background Accents -->
-        <div class="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-teal-500/5 to-transparent pointer-events-none"></div>
-        <slot />
-      </div>
-    </main>
-  </div>
+                        <template v-else>
+                            {{ initials }}
+                        </template>
+                    </div>
+
+                    <div class="min-w-0 flex-1">
+                        <div
+                            class="truncate text-xs font-semibold text-slate-900"
+                        >
+                            {{ dbUser?.fullName || "Administrator" }}
+                        </div>
+
+                        <div class="mt-0.5 truncate text-[10px] text-slate-400">
+                            {{ dbUser?.email }}
+                        </div>
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    @click="handleLogout"
+                    class="mt-2 flex h-10 w-full items-center gap-3 border border-transparent px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 transition-colors hover:border-red-100 hover:bg-red-50 hover:text-red-600"
+                >
+                    <LogOut class="h-4 w-4" />
+                    Sign out
+                </button>
+            </div>
+        </aside>
+
+        <!-- Mobile Sidebar -->
+        <Teleport to="body">
+            <Transition
+                enter-active-class="transition duration-300 ease-out"
+                enter-from-class="opacity-0"
+                enter-to-class="opacity-100"
+                leave-active-class="transition duration-200 ease-in"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+            >
+                <div
+                    v-if="isMobileMenuOpen"
+                    class="fixed inset-0 z-[100] bg-slate-950/40 lg:hidden"
+                    @click="isMobileMenuOpen = false"
+                >
+                    <Transition
+                        enter-active-class="transition duration-300 ease-out"
+                        enter-from-class="-translate-x-full"
+                        enter-to-class="translate-x-0"
+                        leave-active-class="transition duration-200 ease-in"
+                        leave-from-class="translate-x-0"
+                        leave-to-class="-translate-x-full"
+                    >
+                        <aside
+                            class="flex h-full w-72 flex-col bg-white shadow-2xl"
+                            @click.stop
+                        >
+                            <!-- Mobile brand -->
+                            <div
+                                class="flex h-20 items-center justify-between border-b border-slate-200 px-6"
+                            >
+                                <NuxtLink to="/" class="flex items-center">
+                                    <div
+                                        class="flex items-center overflow-hidden"
+                                    >
+                                        <img
+                                            src="/mobile-logo.png"
+                                            alt=""
+                                            class="h-6 w-auto object-contain"
+                                        />
+
+                                        <img
+                                            src="/logo.png"
+                                            alt="DailyBookings"
+                                            class="h-6 w-auto object-contain"
+                                        />
+                                    </div>
+                                </NuxtLink>
+
+                                <button
+                                    type="button"
+                                    @click="isMobileMenuOpen = false"
+                                    class="inline-flex h-9 w-9 items-center justify-center border border-slate-200 text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                                    aria-label="Close navigation"
+                                >
+                                    <X class="h-5 w-5" />
+                                </button>
+                            </div>
+
+                            <!-- Mobile navigation -->
+                            <nav
+                                class="custom-scrollbar flex-1 overflow-y-auto px-4 py-6"
+                                aria-label="Mobile admin navigation"
+                            >
+                                <div
+                                    class="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400"
+                                >
+                                    Administration
+                                </div>
+
+                                <div class="space-y-1">
+                                    <NuxtLink
+                                        v-for="item in navItems"
+                                        :key="item.to"
+                                        :to="item.to"
+                                        class="flex h-11 items-center gap-3 border border-transparent px-3 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                                        active-class="!border-primary/10 !bg-primary/5 !text-primary"
+                                    >
+                                        <component
+                                            :is="item.icon"
+                                            class="h-4 w-4 shrink-0"
+                                        />
+
+                                        <span>{{ item.label }}</span>
+                                    </NuxtLink>
+                                </div>
+                            </nav>
+
+                            <!-- Mobile account -->
+                            <div class="border-t border-slate-200 p-4">
+                                <div
+                                    class="flex items-center gap-3 border border-slate-200 bg-slate-50 px-3 py-3"
+                                >
+                                    <div
+                                        class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden border border-slate-200 bg-white text-xs font-bold text-primary"
+                                    >
+                                        <img
+                                            v-if="dbUser?.profile?.avatarUrl"
+                                            :src="dbUser.profile.avatarUrl"
+                                            :alt="dbUser.fullName || 'Admin'"
+                                            class="h-full w-full object-cover"
+                                        />
+
+                                        <template v-else>
+                                            {{ initials }}
+                                        </template>
+                                    </div>
+
+                                    <div class="min-w-0">
+                                        <div
+                                            class="truncate text-xs font-semibold text-slate-900"
+                                        >
+                                            {{
+                                                dbUser?.fullName ||
+                                                "Administrator"
+                                            }}
+                                        </div>
+
+                                        <div
+                                            class="mt-0.5 text-[10px] text-slate-400"
+                                        >
+                                            Administrator
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    @click="handleLogout"
+                                    class="mt-2 flex h-10 w-full items-center gap-3 border border-transparent px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 transition-colors hover:border-red-100 hover:bg-red-50 hover:text-red-600"
+                                >
+                                    <LogOut class="h-4 w-4" />
+                                    Sign out
+                                </button>
+                            </div>
+                        </aside>
+                    </Transition>
+                </div>
+            </Transition>
+        </Teleport>
+
+        <!-- Main -->
+        <main class="flex min-h-screen min-w-0 flex-1 flex-col">
+            <!-- Header -->
+            <header
+                class="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8"
+            >
+                <div class="flex min-w-0 flex-1 items-center gap-4">
+                    <button
+                        type="button"
+                        @click="isMobileMenuOpen = true"
+                        class="inline-flex h-9 w-9 items-center justify-center border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 lg:hidden"
+                        aria-label="Open navigation"
+                    >
+                        <Menu class="h-5 w-5" />
+                    </button>
+
+                    <div class="group relative hidden w-full max-w-md sm:block">
+                        <Search
+                            class="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-primary"
+                        />
+
+                        <input
+                            type="search"
+                            placeholder="Search..."
+                            aria-label="Search"
+                            class="h-10 w-full border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-400 focus:bg-white"
+                        />
+                    </div>
+                </div>
+
+                <div class="ml-4 flex items-center gap-3">
+                    <button
+                        type="button"
+                        class="relative inline-flex h-9 w-9 items-center justify-center border border-transparent text-slate-400 transition-colors hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900"
+                        aria-label="Notifications"
+                    >
+                        <Bell class="h-4 w-4" />
+
+                        <span
+                            class="absolute right-2 top-2 h-1.5 w-1.5 bg-primary"
+                        />
+                    </button>
+
+                    <div class="hidden h-6 w-px bg-slate-200 sm:block" />
+
+                    <NuxtLink to="/profile" class="flex items-center gap-3">
+                        <div class="hidden text-right sm:block">
+                            <div
+                                class="max-w-[140px] truncate text-xs font-semibold text-slate-900"
+                            >
+                                {{ dbUser?.fullName || "Administrator" }}
+                            </div>
+
+                            <div
+                                class="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                            >
+                                Administrator
+                            </div>
+                        </div>
+
+                        <div
+                            class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden border border-slate-200 bg-slate-50 text-xs font-bold text-primary"
+                        >
+                            <img
+                                v-if="dbUser?.profile?.avatarUrl"
+                                :src="dbUser.profile.avatarUrl"
+                                :alt="dbUser.fullName || 'Administrator'"
+                                class="h-full w-full object-cover"
+                            />
+
+                            <template v-else>
+                                {{ initials }}
+                            </template>
+                        </div>
+                    </NuxtLink>
+                </div>
+            </header>
+
+            <!-- Page -->
+            <div
+                class="custom-scrollbar relative flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 lg:py-8"
+            >
+                <div
+                    class="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-primary/[0.025] to-transparent"
+                />
+
+                <div class="relative z-10 mx-auto max-w-7xl">
+                    <slot />
+                </div>
+            </div>
+        </main>
+    </div>
 </template>
 
 <style>
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+    width: 6px;
+    height: 6px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+    background: transparent;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 10px;
+    background: #e2e8f0;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+    background: #cbd5e1;
+}
+
+.page-enter-active,
+.page-leave-active {
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease;
+}
+
+.page-enter-from,
+.page-leave-to {
+    opacity: 0;
+    transform: translateY(6px);
 }
 </style>

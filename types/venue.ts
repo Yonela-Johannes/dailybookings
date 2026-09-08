@@ -43,6 +43,19 @@ export interface VenueEmployee {
   imageUrl?: string
 }
 
+export interface ReviewComment {
+  id: string
+  userId: string
+  user: {
+    fullName: string
+    profile?: {
+      avatarUrl?: string
+    }
+  }
+  body: string
+  createdAt: string
+}
+
 export interface VenueReview {
   id: string
   authorName: string
@@ -53,6 +66,7 @@ export interface VenueReview {
   employeeName?: string
   verified?: boolean
   postedAt: string
+  comments?: ReviewComment[]
 }
 
 export interface OpeningHours {

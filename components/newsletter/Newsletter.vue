@@ -14,16 +14,14 @@ const handleSubmit = async () => {
     loading.value = true;
 
     try {
-        // Connect your newsletter API here.
-        // Example:
-        // await $fetch("/api/newsletter", {
-        //     method: "POST",
-        //     body: { email: value },
-        // });
+        await $fetch("/api/newsletter/subscribe", {
+            method: "POST",
+            body: { email: value },
+        });
 
         submitted.value = true;
         email.value = "";
-    } catch (error) {
+    } catch (error: any) {
         console.error("Newsletter signup failed:", error);
     } finally {
         loading.value = false;

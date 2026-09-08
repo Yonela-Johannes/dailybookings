@@ -135,7 +135,7 @@ const steps = [
 
                     <div class="mt-10 flex flex-wrap gap-4">
                         <NuxtLink
-                            :to="NAVIGATION_PATHS.REGISTER"
+                            :to="{ path: NAVIGATION_PATHS.REGISTER, query: { role: 'BUSINESS_OWNER' } }"
                             class="group inline-flex h-12 items-center justify-center bg-primary px-8 text-sm font-bold text-white transition-all hover:bg-white hover:text-slate-950"
                         >
                             Get Started
@@ -244,7 +244,7 @@ const steps = [
 
                 <div class="mt-20 text-center">
                      <NuxtLink
-                        :to="NAVIGATION_PATHS.REGISTER"
+                        :to="{ path: NAVIGATION_PATHS.REGISTER, query: { role: 'BUSINESS_OWNER' } }"
                         class="inline-flex h-14 items-center justify-center bg-slate-950 px-10 text-sm font-bold text-white transition-all hover:bg-primary shadow-xl"
                     >
                         Register your business today
@@ -309,7 +309,7 @@ const steps = [
 
                 <div class="mt-12 flex flex-wrap justify-center gap-6">
                     <NuxtLink
-                        :to="NAVIGATION_PATHS.REGISTER"
+                        :to="{ path: NAVIGATION_PATHS.REGISTER, query: { role: 'BUSINESS_OWNER' } }"
                         class="group inline-flex h-14 items-center justify-center bg-white px-12 text-sm font-bold text-slate-950 transition-all hover:bg-slate-950 hover:text-white uppercase tracking-widest"
                     >
                         Create your profile

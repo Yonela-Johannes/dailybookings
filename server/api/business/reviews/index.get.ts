@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
     if (venueId) where.venueId = venueId
     if (rating) where.rating = rating
 
-    const [total, reviews] = await Promise.all([
+    const [total, reviews, avgResult] = await Promise.all([
       prisma.review.count({ where }),
       prisma.review.findMany({
         where,
@@ -55,6 +55,12 @@ export default defineEventHandler(async (event) => {
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit
+      }),
+      prisma.review.aggregate({
+        where,
+        _avg: {
+          rating: true
+        }
       })
     ])
 
@@ -64,7 +70,8 @@ export default defineEventHandler(async (event) => {
         total,
         page,
         limit,
-        totalPages: Math.ceil(total / limit)
+        totalPages: Math.ceil(total / limit),
+        averageRating: avgResult._avg.rating || 0
       }
     }
   } catch (error: any) {

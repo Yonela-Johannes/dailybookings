@@ -4,10 +4,10 @@ import { prisma } from '~/server/utils/prisma'
 import { VenueStatus } from '@prisma/client'
 
 const querySchema = z.object({
-  page: z.string().transform(Number).default('1'),
-  limit: z.string().transform(Number).default('20'),
-  search: z.string().optional(),
-  status: z.nativeEnum(VenueStatus).optional(),
+  page: z.string().optional().transform(v => v ? parseInt(v) : 1),
+  limit: z.string().optional().transform(v => v ? parseInt(v) : 20),
+  search: z.string().optional().transform(v => v === '' ? undefined : v),
+  status: z.string().optional().transform(v => v === '' ? undefined : v).pipe(z.nativeEnum(VenueStatus).optional()),
 })
 
 export default defineEventHandler(async (event) => {

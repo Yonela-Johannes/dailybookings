@@ -4,7 +4,7 @@ import {
   MapPin,
   ChevronRight,
   Star,
-  Heart,
+  Bookmark,
   Filter,
   ArrowRight,
   Loader2,
@@ -17,7 +17,7 @@ import {
   House,
   BriefcaseBusiness
 } from 'lucide-vue-next'
-import { NAVIGATION_PATHS, POPULAR_SERVICES, LOCATIONS } from "~/utils/constants";
+import { NAVIGATION_PATHS} from "~/utils/constants";
 
 useHead({
     title: "Discover Local Services | DailyBookings",
@@ -142,6 +142,44 @@ const handleSearch = () => {
             </div>
             <h3 class="font-bold text-slate-950 mb-2 uppercase tracking-wider text-xs">{{ cat.name }}</h3>
             <p v-if="cat.description" class="text-[10px] font-medium text-slate-400 uppercase tracking-[0.15em]">{{ cat.description }}</p>
+          </NuxtLink>
+        </div>
+      </section>
+
+      <!-- Communities Section -->
+      <section>
+        <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+          <div class="max-w-2xl">
+            <p class="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Connect</p>
+            <h2 class="text-3xl md:text-4xl font-bold text-slate-950 tracking-tight">Local Neighborhoods</h2>
+            <p class="mt-4 text-slate-600">Join a community to find top professionals in your area.</p>
+          </div>
+          <NuxtLink to="/community" class="text-sm font-bold text-slate-950 border-b-2 border-primary pb-1 hover:text-primary transition-colors">
+            Browse All Communities
+          </NuxtLink>
+        </div>
+
+        <div v-if="pending" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div v-for="i in 3" :key="i" class="h-64 animate-pulse bg-slate-50 border border-slate-100"></div>
+        </div>
+
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          <NuxtLink
+            v-for="community in discoveryData?.communities?.slice(0, 3)"
+            :key="community.id"
+            :to="`/community/${community.slug}`"
+            class="group relative overflow-hidden border border-slate-200 bg-white hover:border-primary transition-all shadow-sm hover:shadow-xl flex flex-col"
+          >
+            <div class="aspect-[16/9] overflow-hidden bg-slate-100">
+                <img v-if="community.imageUrl" :src="community.imageUrl" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                <div v-else class="h-full w-full flex items-center justify-center text-slate-200">
+                    <MapPin class="h-12 w-12" />
+                </div>
+            </div>
+            <div class="p-6">
+                <h3 class="text-xl font-bold text-slate-950 mb-2">{{ community.name }}</h3>
+                <p class="text-sm text-slate-500 line-clamp-2">{{ community.description || 'Discover local services and professionals.' }}</p>
+            </div>
           </NuxtLink>
         </div>
       </section>

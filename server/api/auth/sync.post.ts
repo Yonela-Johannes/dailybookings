@@ -1,17 +1,18 @@
 import { prisma } from '~/server/utils/prisma'
 import { z } from 'zod'
-import { serverSupabaseUser } from '#supabase/server'
+import { serverSupabaseClient } from '#supabase/server'
 
 const syncUserSchema = z.object({
   id: z.string(),
-  email: z.string().email(),
-  fullName: z.string().optional().nullable(),
+  email: z.string().trim().email().toLowerCase(),
+  fullName: z.string().trim().optional().nullable(),
   avatarUrl: z.string().url().optional().nullable(),
   role: z.enum(['CUSTOMER', 'BUSINESS_OWNER', 'PLATFORM_ADMIN']).optional()
 })
 
 export default defineEventHandler(async (event) => {
-  const user = await serverSupabaseUser(event)
+  const client = await serverSupabaseClient(event)
+  const { data: { user } } = await client.auth.getUser()
   const body = await readBody(event)
 
   // Validation
@@ -28,13 +29,58 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const dbUser = await prisma.user.upsert({
+    // 1. Try to find the user by Supabase ID
+    let dbUser = await prisma.user.findUnique({
+      where: { id: data.id }
+    })
+
+    // 2. If not found, try by Email (migration/seed scenario)
+    if (!dbUser) {
+      const existingByEmail = await prisma.user.findUnique({
+        where: { email: data.email }
+      })
+
+      if (existingByEmail) {
+        // Migration: Update the existing user record with the new Supabase ID
+        // Note: Prisma doesn't support updating the ID field directly in a simple way.
+        // We have to delete and recreate, or use a raw query.
+        // Since we want to preserve relations, let's use a raw query to update the ID.
+        await prisma.$executeRawUnsafe(
+          `UPDATE "User" SET "id" = $1 WHERE "id" = $2`,
+          data.id,
+          existingByEmail.id
+        )
+
+        // Now fetch it again with the new ID
+        dbUser = await prisma.user.findUnique({
+          where: { id: data.id }
+        })
+      }
+    }
+
+    const updateData: any = {
+      email: data.email,
+      fullName: data.fullName,
+    }
+
+    // Role Handling
+    if (data.role) {
+      if (dbUser) {
+        if (dbUser.role === 'PLATFORM_ADMIN') {
+          updateData.role = 'PLATFORM_ADMIN'
+        } else if (data.role === 'PLATFORM_ADMIN') {
+          updateData.role = 'PLATFORM_ADMIN'
+        } else {
+          updateData.role = data.role
+        }
+      } else {
+        updateData.role = data.role
+      }
+    }
+
+    dbUser = await prisma.user.upsert({
       where: { id: data.id },
-      update: {
-        email: data.email,
-        fullName: data.fullName,
-        role: data.role
-      },
+      update: updateData,
       create: {
         id: data.id,
         email: data.email,

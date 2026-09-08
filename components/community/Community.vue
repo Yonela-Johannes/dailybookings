@@ -1,65 +1,26 @@
 <script setup lang="ts">
 import { ArrowUpRight, Play } from "lucide-vue-next";
 
-interface GalleryItem {
-    id: number;
-    type: "image" | "video";
-    image: string;
-    video?: string;
-    title?: string;
-    category?: string;
-    description?: string;
-    featured?: boolean;
-    to?: string;
-}
+const { data: discovery, pending } = await useDiscovery();
 
-const items: GalleryItem[] = [
-    {
-        id: 1,
-        type: "video",
-        image: "/images/makeup.jpg",
-        video: "/videos/makeup-2.mp4",
-        category: "Beauty",
-        title: "Made for the people who make us feel good.",
-        featured: true,
-    },
-    {
-        id: 2,
-        type: "image",
-        image: "/images/barber.jpg",
-        category: "Barbers",
-        title: "Local talent. Serious craft.",
-    },
-    {
-        id: 3,
-        type: "video",
-        image: "/images/barber-video.jpg",
-        video: "/videos/barber.mp4",
-        category: "Community",
-        title: "The people behind the booking.",
-    },
-    {
-        id: 4,
-        type: "image",
-        image: "/images/photographer.jpg",
-        category: "Photography",
-        title: "Moments worth remembering.",
-    },
-    {
-        id: 5,
-        type: "video",
-        image: "/images/community/photography-video.jpg",
-        video: "/videos/photography.mp4",
-        category: "Photography",
-        title: "Turn your next moment into a memory.",
-    },
-];
+const items = computed(() => {
+    const communities = discovery.value?.communities || [];
 
-const visibleItems = items.slice(0, 7);
+    return communities.map((c: any) => ({
+        id: c.id,
+        type: 'image',
+        image: c.imageUrl,
+        category: 'Neighborhood',
+        title: c.name,
+        to: `/community/${c.slug}`
+    }));
+});
+
+const visibleItems = computed(() => items.value.slice(0, 6));
 </script>
 
 <template>
-    <section class="border-t border-slate-200 bg-white">
+    <section v-if="visibleItems.length" class="border-t border-slate-200 bg-white">
         <div class="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
             <!-- Header -->
             <div class="mx-auto max-w-2xl text-center">
@@ -84,7 +45,7 @@ const visibleItems = items.slice(0, 7);
             </div>
 
             <!-- Gallery -->
-            <div class="mt-12 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            <div v-if="!pending" class="mt-12 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                 <!-- Large feature -->
                 <NuxtLink
                     v-if="visibleItems[0]"
@@ -97,7 +58,6 @@ const visibleItems = items.slice(0, 7);
                             visibleItems[0].video
                         "
                         :src="visibleItems[0].video"
-                        :poster="visibleItems[0].image"
                         autoplay
                         muted
                         loop
@@ -188,9 +148,8 @@ const visibleItems = items.slice(0, 7);
                     class="group relative aspect-[4/5] overflow-hidden rounded-2xl bg-slate-100"
                 >
                     <video
-                        v-if="visibleItems[2].video"
+                        v-if="visibleItems[2].type === 'video' && visibleItems[2].video"
                         :src="visibleItems[2].video"
-                        :poster="visibleItems[2].image"
                         autoplay
                         muted
                         loop
@@ -211,6 +170,7 @@ const visibleItems = items.slice(0, 7);
                     />
 
                     <div
+                        v-if="visibleItems[2].type === 'video'"
                         class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-black/20 text-white backdrop-blur-sm"
                     >
                         <Play class="h-3.5 w-3.5 fill-current" />
@@ -269,13 +229,20 @@ const visibleItems = items.slice(0, 7);
                     class="group relative aspect-[4/5] overflow-hidden rounded-2xl bg-slate-100"
                 >
                     <video
-                        v-if="visibleItems[4].video"
+                        v-if="visibleItems[4].type === 'video' && visibleItems[4].video"
                         :src="visibleItems[4].video"
-                        :poster="visibleItems[4].image"
                         autoplay
                         muted
                         loop
                         playsinline
+                        class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                    />
+
+                    <img
+                        v-else
+                        :src="visibleItems[4].image"
+                        :alt="visibleItems[4].title || ''"
+                        loading="lazy"
                         class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
                     />
 
@@ -284,6 +251,7 @@ const visibleItems = items.slice(0, 7);
                     />
 
                     <div
+                        v-if="visibleItems[4].type === 'video'"
                         class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-black/20 text-white backdrop-blur-sm"
                     >
                         <Play class="h-3.5 w-3.5 fill-current" />
@@ -379,7 +347,7 @@ const visibleItems = items.slice(0, 7);
                     to="/community"
                     class="group inline-flex h-11 items-center gap-2 border border-slate-300 px-6 text-sm font-semibold text-slate-950 transition-colors hover:border-slate-950 hover:bg-slate-950 hover:text-white"
                 >
-                    Explore our community
+                    Explore our communities
 
                     <ArrowUpRight
                         class="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"

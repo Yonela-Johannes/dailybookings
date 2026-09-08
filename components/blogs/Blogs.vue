@@ -61,7 +61,7 @@ const secondaryPosts = computed(() => posts.value.slice(1));
                 <NuxtLink
                     v-if="featuredPost"
                     :to="`/blog/${featuredPost.slug}`"
-                    class="group relative min-h-[440px] overflow-hidden bg-slate-900 lg:min-h-[520px]"
+                    class="group relative min-h-[440px] overflow-hidden bg-slate-900 lg:min-h-[520px] rounded-lg"
                 >
                     <img
                         :src="featuredPost.featuredImage || '/images/blog/placeholder.jpg'"
@@ -115,7 +115,7 @@ const secondaryPosts = computed(() => posts.value.slice(1));
                         v-for="post in secondaryPosts"
                         :key="post.slug"
                         :to="`/blog/${post.slug}`"
-                        class="group grid grid-cols-[140px_1fr] border border-slate-200 bg-white sm:grid-cols-[180px_1fr] lg:grid-cols-[200px_1fr]"
+                        class="group grid grid-cols-[140px_1fr] border border-slate-200 bg-white sm:grid-cols-[180px_1fr] lg:grid-cols-[200px_1fr] rounded-lg"
                     >
                         <!-- Image -->
                         <div
@@ -125,7 +125,7 @@ const secondaryPosts = computed(() => posts.value.slice(1));
                                 :src="post.featuredImage || '/images/blog/placeholder.jpg'"
                                 :alt="post.title"
                                 loading="lazy"
-                                class="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                                class="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04] rounded-lg"
                             />
                         </div>
 

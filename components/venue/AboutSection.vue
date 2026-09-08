@@ -99,6 +99,10 @@ defineProps<{
                     </p>
                 </address>
 
+                <div v-if="venue.address.lat && venue.address.lng" class="mt-6 h-64">
+                    <LocationMap :points="[{ id: venue.id, name: venue.name, latitude: venue.address.lat, longitude: venue.address.lng, category: venue.category?.name }]" :center="[venue.address.lng, venue.address.lat]" :zoom="14" />
+                </div>
+
                 <a
                     :href="`https://maps.google.com/?q=${venue.address.lat},${venue.address.lng}`"
                     target="_blank"

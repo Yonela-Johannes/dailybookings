@@ -1,171 +1,397 @@
 <script setup lang="ts">
 import {
-  Search,
-  Filter,
-  Calendar,
-  Clock,
-  User,
-  Store,
-  CreditCard,
-  MoreVertical,
-  Loader2,
-  ChevronLeft,
-  ChevronRight,
-  Download
-} from 'lucide-vue-next'
-import { format, parseISO } from 'date-fns'
+    Filter,
+    Calendar,
+    Clock,
+    CreditCard,
+    Loader2,
+    ChevronLeft,
+    ChevronRight,
+    Download,
+    ArrowUpRight,
+} from "lucide-vue-next";
+import { format, parseISO } from "date-fns";
 
 definePageMeta({
-  layout: 'admin',
-  middleware: 'auth'
-})
+    layout: "admin",
+    middleware: "auth",
+});
 
-const statusFilter = ref('')
-const page = ref(1)
+const statusFilter = ref("");
+const page = ref(1);
 
-const { data: bookingsData, pending, refresh } = useFetch('/api/admin/bookings', {
-  query: {
-    status: statusFilter,
-    page,
-    limit: 10
-  },
-  watch: [statusFilter, page]
-})
+const {
+    data: bookingsData,
+    pending,
+    refresh,
+} = useFetch("/api/admin/bookings", {
+    query: {
+        status: statusFilter,
+        page,
+        limit: 10,
+    },
+    watch: [statusFilter, page],
+});
 
-const bookings = computed(() => bookingsData.value?.data || [])
-const meta = computed(() => bookingsData.value?.meta || { total: 0, page: 1, totalPages: 1 })
+const bookings = computed(() => bookingsData.value?.data || []);
+
+const meta = computed(
+    () =>
+        bookingsData.value?.meta || {
+            total: 0,
+            page: 1,
+            totalPages: 1,
+        },
+);
 
 const getStatusColor = (status: string) => {
-  switch (status.toUpperCase()) {
-    case 'CONFIRMED':
-    case 'COMPLETED': return 'text-teal-400 bg-teal-400/10 border-teal-400/20'
-    case 'PENDING': return 'text-amber-400 bg-amber-400/10 border-amber-400/20'
-    case 'CANCELLED': return 'text-red-400 bg-red-400/10 border-red-400/20'
-    default: return 'text-slate-400 bg-slate-400/10 border-slate-400/20'
-  }
-}
+    switch (status.toUpperCase()) {
+        case "CONFIRMED":
+        case "COMPLETED":
+            return "text-teal-700 bg-teal-50 border-teal-200";
+
+        case "PENDING":
+            return "text-amber-700 bg-amber-50 border-amber-200";
+
+        case "CANCELLED":
+            return "text-red-700 bg-red-50 border-red-200";
+
+        default:
+            return "text-slate-600 bg-slate-50 border-slate-200";
+    }
+};
 </script>
 
 <template>
-  <div class="space-y-8">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-3xl font-extrabold text-white uppercase italic tracking-tight">Global Bookings</h1>
-        <p class="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Unified Platform Transaction Log</p>
-      </div>
-      <button class="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white font-black rounded-xl hover:bg-slate-800 transition-all border border-slate-800 uppercase tracking-widest text-xs">
-        <Download class="w-4 h-4" />
-        Export CSV
-      </button>
+    <div class="space-y-8 pb-20">
+        <!-- Page Header -->
+        <Head
+            title="Bookings"
+            description="Manage and monitor bookings across DailyBookings"
+        />
+
+        <!-- Actions -->
+        <div
+            class="flex flex-col gap-4 border-b border-slate-200 pb-6 sm:flex-row sm:items-center sm:justify-between"
+        >
+            <div class="flex items-center gap-3">
+                <div
+                    class="border border-slate-200 bg-white px-4 py-2.5 text-[11px] font-semibold text-slate-600"
+                >
+                    {{ meta.total }} bookings
+                </div>
+
+                <div
+                    class="border border-slate-200 bg-white px-4 py-2.5 text-[11px] font-medium text-slate-400"
+                >
+                    Page {{ meta.page }} of {{ meta.totalPages }}
+                </div>
+            </div>
+
+            <button
+                type="button"
+                class="inline-flex h-10 items-center justify-center gap-2 border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+            >
+                <Download class="h-4 w-4" />
+                Export
+            </button>
+        </div>
+
+        <!-- Booking Table -->
+        <div class="overflow-hidden border border-slate-200 bg-white shadow-sm">
+            <!-- Filters -->
+            <div
+                class="flex flex-col gap-4 border-b border-slate-200 bg-slate-50/40 p-5 sm:flex-row sm:items-center"
+            >
+                <div class="flex-1">
+                    <label
+                        for="status-filter"
+                        class="mb-2 block text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400"
+                    >
+                        Booking status
+                    </label>
+
+                    <select
+                        id="status-filter"
+                        v-model="statusFilter"
+                        class="h-10 w-full border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition-colors focus:border-slate-400 sm:w-64"
+                    >
+                        <option value="">All bookings</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="CONFIRMED">Confirmed</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="CANCELLED">Cancelled</option>
+                    </select>
+                </div>
+
+                <button
+                    type="button"
+                    @click="refresh"
+                    class="mt-auto inline-flex h-10 w-10 shrink-0 items-center justify-center border border-slate-200 bg-white text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                    aria-label="Refresh bookings"
+                >
+                    <Filter class="h-4 w-4" />
+                </button>
+            </div>
+
+            <!-- Loading -->
+            <div
+                v-if="pending"
+                class="flex min-h-[520px] items-center justify-center"
+            >
+                <Loader2 class="h-6 w-6 animate-spin text-slate-400" />
+            </div>
+
+            <!-- Table -->
+            <div v-else-if="bookings.length" class="overflow-x-auto">
+                <table class="w-full min-w-[1000px] text-left">
+                    <thead>
+                        <tr class="border-b border-slate-200 bg-slate-50/60">
+                            <th
+                                class="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                            >
+                                Booking
+                            </th>
+
+                            <th
+                                class="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                            >
+                                Customer
+                            </th>
+
+                            <th
+                                class="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                            >
+                                Business
+                            </th>
+
+                            <th
+                                class="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                            >
+                                Date & time
+                            </th>
+
+                            <th
+                                class="px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                            >
+                                Status
+                            </th>
+
+                            <th
+                                class="px-6 py-4 text-right text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                            >
+                                Total
+                            </th>
+
+                            <th
+                                class="px-6 py-4 text-right text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                            >
+                                <span class="sr-only">Actions</span>
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody class="divide-y divide-slate-100">
+                        <tr
+                            v-for="booking in bookings"
+                            :key="booking.id"
+                            class="group transition-colors hover:bg-slate-50/60"
+                        >
+                            <!-- Booking -->
+                            <td class="px-6 py-5">
+                                <div
+                                    class="font-mono text-xs font-semibold text-slate-700"
+                                >
+                                    #{{ booking.id.slice(-8) }}
+                                </div>
+
+                                <div class="mt-1 text-[10px] text-slate-400">
+                                    {{ booking.services?.length || 0 }}
+                                    {{
+                                        booking.services?.length === 1
+                                            ? "service"
+                                            : "services"
+                                    }}
+                                </div>
+                            </td>
+
+                            <!-- Customer -->
+                            <td class="px-6 py-5">
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="flex h-9 w-9 shrink-0 items-center justify-center border border-slate-200 bg-slate-50 text-xs font-bold text-slate-600"
+                                    >
+                                        {{ booking.user?.fullName?.[0] || "G" }}
+                                    </div>
+
+                                    <div class="min-w-0">
+                                        <div
+                                            class="max-w-[180px] truncate text-sm font-semibold text-slate-900"
+                                        >
+                                            {{
+                                                booking.user?.fullName ||
+                                                "Anonymous"
+                                            }}
+                                        </div>
+
+                                        <div
+                                            class="mt-0.5 max-w-[180px] truncate text-xs text-slate-400"
+                                        >
+                                            {{ booking.user?.email }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Business -->
+                            <td class="px-6 py-5">
+                                <div
+                                    class="max-w-[190px] truncate text-sm font-semibold text-slate-900"
+                                >
+                                    {{ booking.venue?.name || "—" }}
+                                </div>
+
+                                <div
+                                    v-if="booking.venue?.slug"
+                                    class="mt-1 max-w-[190px] truncate text-xs text-slate-400"
+                                >
+                                    {{ booking.venue.slug }}
+                                </div>
+                            </td>
+
+                            <!-- Date / Time -->
+                            <td class="px-6 py-5">
+                                <div
+                                    class="flex items-center gap-2 text-sm font-medium text-slate-800"
+                                >
+                                    <Calendar
+                                        class="h-4 w-4 shrink-0 text-slate-400"
+                                    />
+
+                                    {{
+                                        format(
+                                            parseISO(booking.date),
+                                            "MMM d, yyyy",
+                                        )
+                                    }}
+                                </div>
+
+                                <div
+                                    class="mt-1.5 flex items-center gap-2 text-xs text-slate-400"
+                                >
+                                    <Clock class="h-3.5 w-3.5 shrink-0" />
+
+                                    <span>
+                                        {{ booking.startTime }}
+                                        <span class="mx-1 text-slate-300">
+                                            –
+                                        </span>
+                                        {{ booking.endTime }}
+                                    </span>
+                                </div>
+                            </td>
+
+                            <!-- Status -->
+                            <td class="px-6 py-5">
+                                <span
+                                    :class="[
+                                        'inline-flex items-center border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide',
+                                        getStatusColor(booking.status),
+                                    ]"
+                                >
+                                    {{ booking.status }}
+                                </span>
+                            </td>
+
+                            <!-- Total -->
+                            <td class="px-6 py-5 text-right">
+                                <div class="text-sm font-bold text-slate-900">
+                                    R{{ booking.priceTotal.toLocaleString() }}
+                                </div>
+
+                                <div class="mt-1 text-[10px] text-slate-400">
+                                    {{ booking.services?.length || 0 }}
+                                    {{
+                                        booking.services?.length === 1
+                                            ? "item"
+                                            : "items"
+                                    }}
+                                </div>
+                            </td>
+
+                            <!-- Action -->
+                            <td class="px-6 py-5 text-right">
+                                <NuxtLink
+                                    :to="`/admin/bookings/${booking.id}`"
+                                    class="inline-flex h-9 w-9 items-center justify-center border border-slate-200 bg-white text-slate-400 opacity-0 transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 group-hover:opacity-100"
+                                    aria-label="View booking"
+                                >
+                                    <ArrowUpRight class="h-4 w-4" />
+                                </NuxtLink>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty -->
+            <div
+                v-else
+                class="flex min-h-[520px] flex-col items-center justify-center px-6 text-center"
+            >
+                <div
+                    class="mb-5 flex h-14 w-14 items-center justify-center border border-slate-200 bg-slate-50"
+                >
+                    <CreditCard class="h-6 w-6 text-slate-300" />
+                </div>
+
+                <h3 class="text-base font-semibold text-slate-900">
+                    No bookings found
+                </h3>
+
+                <p class="mt-1 max-w-sm text-sm text-slate-400">
+                    Bookings matching your current filters will appear here.
+                </p>
+            </div>
+
+            <!-- Pagination -->
+            <div
+                class="flex flex-col gap-4 border-t border-slate-200 bg-slate-50/40 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+                <p class="text-xs text-slate-400">
+                    Showing page
+                    <span class="font-semibold text-slate-600">
+                        {{ meta.page }}
+                    </span>
+                    of
+                    <span class="font-semibold text-slate-600">
+                        {{ meta.totalPages }}
+                    </span>
+                    · {{ meta.total }} total
+                </p>
+
+                <div class="flex items-center gap-2">
+                    <button
+                        type="button"
+                        :disabled="page === 1"
+                        @click="page--"
+                        class="inline-flex h-9 w-9 items-center justify-center border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+                        aria-label="Previous page"
+                    >
+                        <ChevronLeft class="h-4 w-4" />
+                    </button>
+
+                    <button
+                        type="button"
+                        :disabled="page >= meta.totalPages"
+                        @click="page++"
+                        class="inline-flex h-9 w-9 items-center justify-center border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+                        aria-label="Next page"
+                    >
+                        <ChevronRight class="h-4 w-4" />
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <!-- Table Container -->
-    <div class="bg-slate-950/50 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
-      <div class="p-6 border-b border-slate-800 bg-slate-900/50 flex flex-col sm:flex-row items-center gap-4">
-        <div class="flex items-center gap-4 w-full sm:w-auto">
-          <select v-model="statusFilter" class="bg-slate-900 border border-slate-800 text-slate-400 text-xs font-bold px-5 py-3 rounded-xl focus:ring-2 focus:ring-teal-500/20 outline-none w-full sm:w-48 appearance-none cursor-pointer">
-            <option value="">All Transactions</option>
-            <option value="PENDING">Pending</option>
-            <option value="CONFIRMED">Confirmed</option>
-            <option value="COMPLETED">Completed</option>
-            <option value="CANCELLED">Cancelled</option>
-          </select>
-        </div>
-        <div class="flex-1"></div>
-        <button @click="refresh" class="p-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-400 hover:text-white transition-colors">
-          <Filter class="w-5 h-5" />
-        </button>
-      </div>
-
-      <div class="overflow-x-auto min-h-[500px]">
-        <div v-if="pending" class="flex items-center justify-center py-40">
-          <Loader2 class="w-10 h-10 text-teal-500 animate-spin" />
-        </div>
-
-        <table v-else class="w-full text-left border-collapse">
-          <thead>
-            <tr class="border-b border-slate-800 bg-slate-950/40">
-              <th class="px-8 py-5 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Transaction ID</th>
-              <th class="px-8 py-5 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Client</th>
-              <th class="px-8 py-5 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Venue</th>
-              <th class="px-8 py-5 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Schedule</th>
-              <th class="px-8 py-5 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Status</th>
-              <th class="px-8 py-5 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] text-right">Value</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-800/50">
-            <tr v-for="booking in bookings" :key="booking.id" class="hover:bg-slate-900/40 transition-all group">
-              <td class="px-8 py-6 font-mono text-[10px] text-slate-600 group-hover:text-teal-500 transition-colors uppercase">
-                #{{ booking.id.slice(-8) }}
-              </td>
-              <td class="px-8 py-6">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-teal-500 font-bold text-xs">
-                    {{ booking.user?.fullName?.[0] || 'G' }}
-                  </div>
-                  <div>
-                    <div class="text-xs font-bold text-white">{{ booking.user?.fullName || 'Guest' }}</div>
-                    <div class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">{{ booking.user?.email }}</div>
-                  </div>
-                </div>
-              </td>
-              <td class="px-8 py-6">
-                <div class="text-xs font-bold text-slate-300">{{ booking.venue?.name }}</div>
-                <div class="text-[9px] text-slate-600 font-black uppercase tracking-tighter italic">Slug: {{ booking.venue?.slug }}</div>
-              </td>
-              <td class="px-8 py-6">
-                <div class="flex items-center gap-2 text-xs font-bold text-slate-400">
-                  <Calendar class="w-3 h-3 text-slate-600" />
-                  {{ format(parseISO(booking.date), 'PP') }}
-                </div>
-                <div class="flex items-center gap-2 text-[10px] text-slate-500 mt-1 font-black uppercase">
-                  <Clock class="w-3 h-3 text-slate-700" />
-                  {{ booking.startTime }} - {{ booking.endTime }}
-                </div>
-              </td>
-              <td class="px-8 py-6">
-                <span :class="['px-3 py-1 text-[9px] font-black uppercase rounded-full border tracking-[0.1em]', getStatusColor(booking.status)]">
-                  {{ booking.status }}
-                </span>
-              </td>
-              <td class="px-8 py-6 text-right">
-                <div class="text-sm font-black text-white italic tracking-tighter">R{{ booking.priceTotal.toLocaleString() }}</div>
-                <div class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">{{ booking.services?.length }} Service(s)</div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div v-if="bookings.length === 0 && !pending" class="p-20 text-center text-slate-500">
-           <div class="mb-4 flex justify-center opacity-20">
-              <CreditCard class="w-16 h-16" />
-           </div>
-           <p class="font-bold uppercase tracking-widest text-xs">No transactions recorded in this cycle</p>
-        </div>
-      </div>
-
-      <!-- Pagination -->
-      <div class="p-8 bg-slate-950/40 border-t border-slate-800 flex items-center justify-between">
-        <div class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
-          Page {{ meta.page }} of {{ meta.totalPages }} <span class="mx-2 text-slate-800">|</span> {{ meta.total }} Records
-        </div>
-        <div class="flex items-center gap-3">
-          <button
-            :disabled="page === 1"
-            @click="page--"
-            class="p-2 bg-slate-900 border border-slate-800 text-slate-500 font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-800 transition-all"
-          >
-            <ChevronLeft class="w-5 h-5" />
-          </button>
-          <button
-            :disabled="page >= meta.totalPages"
-            @click="page++"
-            class="p-2 bg-slate-900 border border-slate-800 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-800 transition-all"
-          >
-            <ChevronRight class="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
 </template>

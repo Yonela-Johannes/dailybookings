@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { serverSupabaseUser } from '#supabase/server'
+import { serverSupabaseClient } from '#supabase/server'
 import { prisma } from '~/server/utils/prisma'
 import { calculateAvailableSlots } from '~/server/utils/availability'
 import { addMinutes, parse, format } from 'date-fns'
@@ -14,8 +14,9 @@ const bookingSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
+  const client = await serverSupabaseClient(event)
+  const { data: { user } } = await client.auth.getUser()
 
-  const user = await serverSupabaseUser(event)
   if (!user) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
@@ -76,7 +77,6 @@ export default defineEventHandler(async (event) => {
         data: {
           userId: user.id,
           venueId,
-          employeeId: employeeId || null,
           date: bookingDate,
           startTime,
           endTime,
@@ -88,6 +88,8 @@ export default defineEventHandler(async (event) => {
             create: services.map((s) => ({
               serviceId: s.id,
               price: s.price,
+              durationMinutes: s.durationMinutes,
+              employeeId: employeeId || null,
             })),
           },
           payment: {

@@ -58,6 +58,23 @@ export default defineEventHandler(async (event) => {
                   }
                 }
               }
+            },
+            comments: {
+              include: {
+                user: {
+                  select: {
+                    fullName: true,
+                    profile: {
+                      select: {
+                        avatarUrl: true
+                      }
+                    }
+                  }
+                }
+              },
+              orderBy: {
+                createdAt: 'asc'
+              }
             }
           }
         }
@@ -125,7 +142,19 @@ export default defineEventHandler(async (event) => {
         serviceName: r.serviceName,
         employeeName: r.employeeName,
         verified: r.verified,
-        postedAt: r.createdAt.toISOString()
+        postedAt: r.createdAt.toISOString(),
+        comments: r.comments.map(c => ({
+          id: c.id,
+          userId: c.userId,
+          user: {
+            fullName: c.user.fullName,
+            profile: {
+              avatarUrl: c.user.profile?.avatarUrl
+            }
+          },
+          body: c.body,
+          createdAt: c.createdAt.toISOString()
+        }))
       })),
       hours: venue.schedules.map(s => ({
         day: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][s.day],

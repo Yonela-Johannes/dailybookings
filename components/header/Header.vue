@@ -17,6 +17,8 @@ import {
     House,
     BriefcaseBusiness,
     CircleEllipsis,
+    MessageSquare,
+    Bookmark
 } from "lucide-vue-next";
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import { NAVIGATION_PATHS } from "~/utils/constants";
@@ -114,6 +116,7 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 const dashboardPath = computed(() => {
     if (!dbUser.value) return "/dashboard";
+    console.log(`Header: User role is ${dbUser.value.role}`);
     switch (dbUser.value.role) {
         case "PLATFORM_ADMIN":
             return "/admin";
@@ -148,15 +151,26 @@ const handleLogout = async () => {
                 class="relative z-10 flex shrink-0 items-center"
                 @click="closeMenu"
             >
-                <img
-                    :src="
-                        isScrolled || menuOpen
-                            ? '/logo.png'
-                            : '/logo-inverse.png'
-                    "
-                    alt="DailyBookings"
-                    class="object-cover hidden h-10 w-auto md:block rounded-md"
-                />
+                <div class="flex items-center rounded-md overflow-hidden">
+                    <img
+                        :src="
+                            true || menuOpen
+                                ? '/mobile-logo.png'
+                                : '/mobile-logo-inverse.png'
+                        "
+                        alt="DailyBookings"
+                        class="object-cover hidden h-8 w-auto md:block"
+                    />
+                    <img
+                        :src="
+                            true || menuOpen
+                                ? '/logo.png'
+                                : '/logo-inverse.png'
+                        "
+                        alt="DailyBookings"
+                        class="object-cover hidden h-10 w-auto md:block"
+                    />
+                </div>
 
                 <img
                     :src="
@@ -180,7 +194,7 @@ const handleLogout = async () => {
                 >
                     <NuxtLink
                         v-if="isScrolled"
-                        :to="NAVIGATION_PATHS.DISCOVER"
+                        :to="NAVIGATION_PATHS.SEARCH"
                         class="hidden h-10 items-center gap-2 px-3 text-sm font-semibold text-slate-700 transition-colors hover:text-primary sm:inline-flex"
                     >
                         <Search class="h-4 w-4" />
@@ -190,9 +204,9 @@ const handleLogout = async () => {
 
                 <NuxtLink
                     :to="
-                        user?.role === 'BUSINESS_OWNER'
+                        dbUser?.role === 'BUSINESS_OWNER'
                             ? '/business'
-                            : user?.role === 'PLATFORM_ADMIN'
+                            : dbUser?.role === 'PLATFORM_ADMIN'
                               ? '/admin'
                               : '/for-business'
                     "
@@ -204,6 +218,54 @@ const handleLogout = async () => {
                     "
                 >
                     For Business
+                </NuxtLink>
+
+                <Transition
+                    enter-active-class="transition duration-200 ease-out"
+                    enter-from-class="opacity-0 -translate-y-1"
+                    enter-to-class="opacity-100 translate-y-0"
+                    leave-active-class="transition duration-150 ease-in"
+                    leave-from-class="opacity-100 translate-y-0"
+                    leave-to-class="opacity-0 -translate-y-1"
+                >
+                    <NuxtLink
+                        :to="NAVIGATION_PATHS.DISCOVER"
+                        class="hidden h-10 items-center gap-2 px-3 text-sm font-semibold text-slate-700 transition-colors hover:text-primary sm:inline-flex"
+                        :class="
+                            isScrolled
+                                ? 'text-slate-700 hover:text-primary'
+                                : 'text-white hover:text-white/80'
+                        "
+                    >
+                        Discover
+                    </NuxtLink>
+                </Transition>
+
+                <NuxtLink
+                    v-if="user"
+                    to="/messages"
+                    class="hidden h-10 items-center gap-2 px-3 text-sm font-semibold transition-colors sm:inline-flex"
+                    :class="
+                        isScrolled
+                            ? 'text-slate-700 hover:text-primary'
+                            : 'text-white hover:text-white/80'
+                    "
+                >
+                    <MessageSquare class="h-4 w-4" />
+                    <span class="hidden lg:inline">Messages</span>
+                </NuxtLink>
+
+                <NuxtLink
+                    to="/community"
+                    class="hidden h-10 items-center gap-2 px-3 text-sm font-semibold transition-colors sm:inline-flex"
+                    :class="
+                        isScrolled
+                            ? 'text-slate-700 hover:text-primary'
+                            : 'text-white hover:text-white/80'
+                    "
+                >
+                    <Users class="h-4 w-4" />
+                    <span class="hidden lg:inline">Community</span>
                 </NuxtLink>
 
                 <NuxtLink
@@ -256,7 +318,6 @@ const handleLogout = async () => {
                 </button>
             </div>
         </nav>
-
 
         <Transition
             enter-active-class="transition duration-200 ease-out"
@@ -314,6 +375,38 @@ const handleLogout = async () => {
                                         class="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-0.5"
                                     />
                                 </button>
+
+                                <NuxtLink
+                                    to="/community"
+                                    class="group flex w-full items-center justify-between px-3 py-3 text-left transition-colors hover:bg-slate-100"
+                                    @click="closeMenu"
+                                >
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="flex h-9 w-9 items-center justify-center bg-slate-100 text-slate-700 transition-colors group-hover:bg-primary/10 group-hover:text-primary"
+                                        >
+                                            <MapPin class="h-4 w-4" />
+                                        </div>
+
+                                        <div>
+                                            <p
+                                                class="text-sm font-semibold text-slate-900"
+                                            >
+                                                Explore communities
+                                            </p>
+
+                                            <p
+                                                class="mt-0.5 text-xs text-slate-500"
+                                            >
+                                                Find local neighborhoods
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <ChevronRight
+                                        class="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-0.5"
+                                    />
+                                </NuxtLink>
 
                                 <div class="mt-5">
                                     <div class="mb-2 px-3">
@@ -399,9 +492,11 @@ const handleLogout = async () => {
 
                                     <NuxtLink
                                         :to="
-                                            user?.role === 'BUSINESS_OWNER'
+                                            dbUser?.role === 'BUSINESS_OWNER'
                                                 ? '/business'
-                                                : '/for-business'
+                                                : dbUser?.role === 'PLATFORM_ADMIN'
+                                                  ? '/admin'
+                                                  : '/for-business'
                                         "
                                         class="flex items-center justify-between px-3 py-3 text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-100"
                                         @click="closeMenu"
@@ -433,7 +528,6 @@ const handleLogout = async () => {
                                 <div
                                     class="border-b border-slate-200 pb-5 md:border-b-0 md:border-r md:pb-0 md:pr-6"
                                 >
-
                                     <h3
                                         class="mt-4 text-lg font-semibold text-slate-900"
                                     >
@@ -482,7 +576,6 @@ const handleLogout = async () => {
                                     class="group flex items-center gap-3 px-3 py-4 text-left transition-colors hover:bg-slate-100"
                                     @click="selectCategory(category.name)"
                                 >
-
                                     <div class="min-w-0 flex-1">
                                         <p
                                             class="text-sm font-semibold text-slate-900"

@@ -8,6 +8,7 @@ const createVenueSchema = z.object({
   tagline: z.string().optional(),
   description: z.string().optional(),
   categoryId: z.string().uuid(),
+  communityId: z.string().uuid().optional().nullable().transform(v => v === '' ? null : v),
   address: z.object({
     street: z.string(),
     suburb: z.string(),
@@ -19,12 +20,12 @@ const createVenueSchema = z.object({
     lng: z.number().optional()
   }),
   contact: z.object({
-    phone: z.string(),
-    whatsapp: z.string().optional(),
-    email: z.string().email(),
-    website: z.string().optional(),
-    instagram: z.string().optional(),
-    facebook: z.string().optional()
+    phone: z.string().trim().min(5),
+    whatsapp: z.string().trim().optional(),
+    email: z.string().trim().email().toLowerCase(),
+    website: z.string().trim().url().optional().or(z.literal('')),
+    instagram: z.string().trim().optional(),
+    facebook: z.string().trim().optional()
   }),
   bookingConfig: z.object({
     instantConfirmation: z.boolean().default(true),
@@ -65,6 +66,7 @@ export default defineEventHandler(async (event) => {
         tagline: data.tagline,
         description: data.description,
         categoryId: data.categoryId,
+        communityId: data.communityId,
         status: 'DRAFT',
         address: {
           create: data.address
@@ -74,12 +76,28 @@ export default defineEventHandler(async (event) => {
         },
         bookingConfig: {
           create: data.bookingConfig
+        },
+        schedules: {
+          createMany: {
+            data: [1, 2, 3, 4, 5].map(day => ({
+              day,
+              opens: '09:00',
+              closes: '17:00',
+              closed: false
+            })).concat([0, 6].map(day => ({
+              day,
+              opens: '09:00',
+              closes: '17:00',
+              closed: true
+            })))
+          }
         }
       },
       include: {
         address: true,
         contact: true,
-        bookingConfig: true
+        bookingConfig: true,
+        schedules: true
       }
     })
 
