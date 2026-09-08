@@ -28,6 +28,8 @@ async function main() {
 
   // 1. CLEANUP
   // prisma db push might have already handled structure, but let's ensure data is clean for these specific IDs
+  await prisma.blog.deleteMany({});
+  await prisma.blogCategory.deleteMany({});
   await prisma.comment.deleteMany({});
   await prisma.review.deleteMany({});
   await prisma.bookingService.deleteMany({});
@@ -294,6 +296,31 @@ async function main() {
   });
   await prisma.message.create({
     data: { conversationId: convo.id, senderId: customer.id, body: "Hello, do you have any specials?" }
+  });
+
+  // 7. BLOGS
+  console.log("Seeding Blogs...");
+  const blogCats = [
+    { name: "Guides", slug: "guides" },
+    { name: "Beauty", slug: "beauty" },
+    { name: "Wellness", slug: "wellness" },
+  ];
+  const blogCatMap: Record<string, any> = {};
+  for (const bc of blogCats) {
+    const record = await prisma.blogCategory.create({ data: bc });
+    blogCatMap[bc.slug] = record;
+  }
+
+  await prisma.blog.create({
+    data: {
+      categoryId: blogCatMap["guides"].id,
+      title: "How to choose the perfect stylist",
+      slug: "choose-perfect-stylist",
+      content: "Detailed guide on choosing the best professional for your needs...",
+      excerpt: "Expert tips for finding your next favorite professional.",
+      published: true,
+      featuredImage: "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=800"
+    }
   });
 
   console.log("Seeding finished successfully.");

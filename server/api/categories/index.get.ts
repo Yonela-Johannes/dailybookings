@@ -12,10 +12,12 @@ export default defineEventHandler(async (event) => {
   try {
     const { page, limit } = querySchema.parse(query)
     const skip = (page - 1) * limit
+    const where = { status: 'ACTIVE' as const }
 
     const [total, categories] = await Promise.all([
-      prisma.category.count(),
+      prisma.category.count({ where }),
       prisma.category.findMany({
+        where,
         skip,
         take: limit,
         orderBy: { name: 'asc' }

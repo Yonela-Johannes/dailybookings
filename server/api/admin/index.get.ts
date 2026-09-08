@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
     prevRevenueResult
   ] = await Promise.all([
     prisma.user.count({ where: { deletedAt: null } }),
-    prisma.venue.count({ where: { deletedAt: null } }),
+    prisma.venue.count({ where: { deletedAt: null, status: 'ACTIVE' } }),
     prisma.booking.count({ where: { deletedAt: null } }),
     prisma.community.count(),
     prisma.booking.aggregate({
@@ -52,7 +52,7 @@ export default defineEventHandler(async (event) => {
     }),
     // Previous week counts for change calculation
     prisma.user.count({ where: { createdAt: { lt: lastWeek }, deletedAt: null } }),
-    prisma.venue.count({ where: { createdAt: { lt: lastWeek }, deletedAt: null } }),
+    prisma.venue.count({ where: { createdAt: { lt: lastWeek }, deletedAt: null, status: 'ACTIVE' } }),
     prisma.booking.count({ where: { createdAt: { lt: lastWeek }, deletedAt: null } }),
     prisma.booking.aggregate({
       where: { createdAt: { lt: lastWeek }, status: { in: ['CONFIRMED', 'COMPLETED'] }, deletedAt: null },

@@ -64,6 +64,19 @@ const handleDelete = async (id: string) => {
         console.error("Failed to delete review:", error);
     }
 };
+
+const toggleVerification = async (id: string, verified: boolean) => {
+    try {
+        await $fetch(`/api/admin/reviews/${id}`, {
+            method: "PATCH",
+            body: { verified },
+        });
+
+        refresh();
+    } catch (error) {
+        console.error("Failed to update review:", error);
+    }
+};
 </script>
 
 <template>
@@ -276,13 +289,19 @@ const handleDelete = async (id: string) => {
                             <div
                                 class="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-slate-100 pt-5"
                             >
-                                <span
-                                    v-if="review.verified"
-                                    class="inline-flex items-center gap-2 text-xs font-semibold text-teal-600"
+                                <button
+                                    type="button"
+                                    @click="toggleVerification(review.id, !review.verified)"
+                                    :class="[
+                                        'inline-flex items-center gap-2 text-xs font-semibold transition-colors',
+                                        review.verified
+                                            ? 'text-teal-600 hover:text-teal-700'
+                                            : 'text-slate-400 hover:text-slate-600',
+                                    ]"
                                 >
                                     <CheckCircle2 class="h-3.5 w-3.5" />
-                                    Verified review
-                                </span>
+                                    {{ review.verified ? 'Verified review' : 'Mark as verified' }}
+                                </button>
 
                                 <span
                                     v-if="review.serviceName"
