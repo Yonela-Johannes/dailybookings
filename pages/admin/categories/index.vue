@@ -108,6 +108,20 @@ function updateSlug() {
         .replace(/^-+|-+$/g, "");
 }
 
+async function toggleStatus(category: Category) {
+    const newStatus = category.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    try {
+        await $fetch(`/api/admin/categories/${category.id}`, {
+            method: "PATCH",
+            body: { status: newStatus },
+        });
+
+        await refresh();
+    } catch (error: any) {
+        alert(error?.data?.statusMessage || "Failed to update category status");
+    }
+}
+
 async function handleSave() {
     if (!form.value.name.trim()) return;
 
@@ -236,16 +250,19 @@ async function handleDelete(id: string) {
                         class="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/30 to-transparent"
                     />
 
-                    <span
+                    <button
+                        type="button"
+                        @click="toggleStatus(category)"
                         :class="[
-                            'absolute top-4 left-4 border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide backdrop-blur-sm',
+                            'absolute top-4 left-4 border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide backdrop-blur-sm transition-all hover:scale-105 active:scale-95',
                             category.status === 'ACTIVE'
                                 ? 'border-teal-200 bg-white/95 text-teal-700'
                                 : 'border-slate-200 bg-white/95 text-slate-500',
                         ]"
+                        :title="`Mark as ${category.status === 'ACTIVE' ? 'Inactive' : 'Active'}`"
                     >
                         {{ category.status }}
-                    </span>
+                    </button>
                 </div>
 
                 <!-- Content -->

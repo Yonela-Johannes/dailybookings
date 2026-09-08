@@ -75,6 +75,7 @@ export default defineEventHandler(async () => {
       }),
       // popularCategories
       prisma.category.findMany({
+        where: { status: 'ACTIVE' },
         include: {
           _count: {
             select: { venues: true }
