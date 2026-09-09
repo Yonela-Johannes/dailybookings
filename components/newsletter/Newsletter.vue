@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowRight, Mail } from "lucide-vue-next";
+import { ArrowRight, Loader2, Mail } from "lucide-vue-next";
 import { ref } from "vue";
 
 const email = ref("");
@@ -97,12 +97,28 @@ const handleSubmit = async () => {
                                 <button
                                     type="submit"
                                     :disabled="loading"
-                                    class="group flex h-12 shrink-0 items-center justify-center gap-2 bg-slate-950 px-6 text-sm font-semibold text-white transition-colors hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
+                                    class="group hidden md:flex h-12 shrink-0 items-center justify-center gap-2 bg-slate-950 px-6 text-sm font-semibold text-white transition-colors hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     {{ loading ? "Joining..." : "Subscribe" }}
 
                                     <ArrowRight
                                         v-if="!loading"
+                                        class="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1"
+                                    />
+                                </button>
+
+                                <button
+                                    type="submit"
+                                    :disabled="loading"
+                                    class="group md:hidden flex h-12 shrink-0 items-center justify-center gap-2 bg-slate-950 px-6 text-sm font-semibold text-white transition-colors hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    <Loader2
+                                        v-if="loading"
+                                        class="h-4 w-4 animate-spin"
+                                    />
+
+                                    <ArrowRight
+                                        v-else
                                         class="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1"
                                     />
                                 </button>
