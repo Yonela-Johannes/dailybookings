@@ -174,7 +174,7 @@ const handleLogout = async () => {
 
                 <img
                     :src="
-                        isScrolled || menuOpen
+                        true || menuOpen
                             ? '/mobile-logo.png'
                             : '/mobile-logo-inverse.png'
                     "
