@@ -94,7 +94,7 @@ onBeforeUnmount(() => {
                     @submit.prevent="handleSearch"
                 >
                     <div
-                        class="grid grid-cols-1 gap-1 md:grid-cols-[minmax(0,1fr)_auto]"
+                        class="grid gap-1 grid-cols-[minmax(0,1fr)_auto]"
                     >
                         <div
                             class="flex h-14 min-w-0 items-center px-4 transition-colors focus-within:bg-slate-50"

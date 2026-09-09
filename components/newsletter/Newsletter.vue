@@ -82,7 +82,7 @@ const handleSubmit = async () => {
                             </label>
 
                             <div
-                                class="flex flex-col border border-slate-300 bg-white sm:flex-row"
+                                class="flex border border-slate-300 bg-white flex-row"
                             >
                                 <input
                                     id="newsletter-email"
